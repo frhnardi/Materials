@@ -12,6 +12,7 @@ Fokus utama repo ini bukan teori panjang, tapi materi yang dekat dengan kerjaan 
 | AWS Core Services | Ready | `AWS.html` | Interactive dashboard AWS Core Services untuk pemula DevOps / Cloud Engineer. |
 | Terraform x AWS | Ready | `Terraform.html` | Mini bootcamp Terraform basic sampai intermediate awal untuk AWS. |
 | Source Briefs | Available | `Source/` | Brief/prompt yang dipakai untuk membuat dan mengembangkan material. |
+| UI Color System Prompt | Available | `Source/UI Color System Prompt.md` | Prompt referensi untuk menjaga warna material tetap readable dan konsisten. |
 
 ## Cara Pakai
 
@@ -53,6 +54,8 @@ Urutan belajar yang disarankan:
 
 Material yang ada di repo ini akan bertambah bertahap. File di `Source/` dipakai sebagai brief untuk membuat atau merevisi material HTML standalone berikutnya dengan Claude Code.
 
+Untuk menjaga kualitas visual material berikutnya, gunakan [UI Color System Prompt](<Source/UI Color System Prompt.md>) sebagai system prompt tambahan saat membuat materi GitHub & GitHub Actions, Docker, Kubernetes, dan GitOps.
+
 ## Design & Quality Notes
 
 Material HTML dibuat dengan prinsip:
@@ -64,6 +67,7 @@ Material HTML dibuat dengan prinsip:
 - Ada table of contents, progress indicator, command block dengan tombol copy, accordion, visual diagram, mini terminal simulator, dan quiz.
 - Palet warna dipilih untuk readability jangka panjang, bukan sekadar tampilan gelap yang terlihat keren.
 - Setiap material dirancang agar bisa dipublish sebagai static page tanpa dependency eksternal.
+- Aturan warna lintas-materi disimpan di `Source/UI Color System Prompt.md`.
 
 ## Publishing
 
