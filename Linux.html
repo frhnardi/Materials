@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="id" suppressHydrationWarning>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Linux Ubuntu Basics untuk DevOps / Cloud Engineer — interactive handbook." />
+<title>Linux Ubuntu Basics · DevOps Command Center</title>
+<style>
+  /* ============================================================
+     DESIGN SYSTEM — long-read Ubuntu handbook
+     Palette source: Ubuntu orange + Ubuntu warm/cool greys, tuned for
+     WCAG contrast and long reading instead of CRT brightness.
+     ============================================================ */
+  :root{
+    /* Official Ubuntu orange is #E95420; darker accents keep small text readable. */
+    --ubuntu-orange:#e95420;
+    --bg:        #eef2ea;
+    --bg-soft:   #e7ece2;
+    --panel:     #f9faf6;
+    --panel-2:   #f1f4ec;
+    --raised:    #e3e9dc;
+    --border:    #c8d2c0;
+    --border-bright:#9aae90;
+
+    --text:      #18231d;
+    --text-dim:  #415042;
+    --text-faint:#61705e;
+
+    --accent:    #a43f13;
+    --accent-strong:#8f3514;
+    --accent-dim:#cf7a58;
+    --accent-glow: rgba(233,84,32,.12);
+    --amber:     #735400;
+    --amber-dim: rgba(115,84,0,.10);
+    --danger:    #943019;
+    --danger-dim:rgba(148,48,25,.10);
+    --sage:      #286840;
+    --sage-dim:  rgba(40,104,64,.10);
+    --code-accent:#7a4215;
+
+    --terminal-bg:#101713;
+    --terminal-bar:#172019;
+    --terminal-raised:#202b22;
+    --terminal-border:#304135;
+    --terminal-text:#dce6d5;
+    --terminal-dim:#95a58f;
+    --terminal-orange:#ffb36c;
+    --terminal-green:#8dbc6a;
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    --radius: 10px;
+    --radius-sm: 8px;
+    --maxw: 880px;
+    --sidebar: 282px;
+    --ease: cubic-bezier(.4,0,.2,1);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:15.5px;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+
+  /* subtle notebook grid; kept behind content and softened for long reading */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size:46px 46px;
+    opacity:.12;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, #000 5%, transparent 75%);
+    pointer-events:none; z-index:0;
+  }
+  body::after{
+    content:none;
+  }
+  /* CRT scanlines were removed: they look thematic, but tire the eyes in long sessions. */
+  html::before{
+    content:none;
+  }
+
+  ::selection{ background:var(--accent-strong); color:#fff7f0; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:var(--border-bright); border-radius:20px; border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#839776; }
+
+  /* ============================================================
+     TOP PROGRESS BAR
+     ============================================================ */
+  #progress{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg, var(--accent-dim), var(--accent));
+    box-shadow:0 0 12px var(--accent-glow);
+    z-index:120; transition:width .12s linear;
+  }
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .app{ display:flex; position:relative; z-index:1; }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar{
+    width:var(--sidebar);
+    position:fixed; top:0; left:0; bottom:0;
+    background:linear-gradient(180deg, var(--bg-soft), var(--bg));
+    border-right:1px solid var(--border);
+    padding:26px 18px 26px 26px;
+    display:flex; flex-direction:column;
+    z-index:90;
+    transition:transform .35s var(--ease);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .brand .mark{
+    width:38px; height:38px; border-radius:10px;
+    background:linear-gradient(135deg, var(--panel), var(--raised));
+    border:1px solid var(--border-bright);
+    display:grid; place-items:center; flex-shrink:0;
+    box-shadow:0 0 0 1px rgba(233,84,32,.08), inset 0 1px 0 rgba(255,255,255,.75);
+  }
+  .brand .mark span{ color:var(--accent); font-family:var(--mono); font-weight:700; font-size:18px; }
+  .brand h1{ font-size:14.5px; font-weight:700; letter-spacing:.2px; line-height:1.2; }
+  .brand p{ font-family:var(--mono); font-size:10.5px; color:var(--text-faint); letter-spacing:1.5px; text-transform:uppercase; }
+
+  .meta-line{
+    display:flex; align-items:center; gap:7px; margin:18px 2px 16px;
+    font-family:var(--mono); font-size:10.5px; color:var(--text-dim); letter-spacing:.4px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .toc{ overflow-y:auto; margin:0 -8px; padding:4px 8px; flex:1; scrollbar-width:thin; }
+  .toc a{
+    display:flex; align-items:center; gap:11px;
+    padding:8.5px 11px; margin:1px 0;
+    border-radius:9px;
+    color:var(--text-dim); text-decoration:none;
+    font-size:13.5px; font-weight:500;
+    transition:all .18s var(--ease);
+    position:relative;
+  }
+  .toc a .num{ font-family:var(--mono); font-size:10.5px; color:var(--text-faint); min-width:18px; transition:color .18s; }
+  .toc a:hover{ background:var(--panel); color:var(--text); }
+  .toc a:hover .num{ color:var(--accent); }
+  .toc a.active{ background:var(--panel-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border-bright); }
+  .toc a.active .num{ color:var(--accent); }
+  .toc a.active::before{
+    content:""; position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+    width:3px; height:18px; border-radius:3px; background:var(--accent); box-shadow:0 0 10px var(--accent);
+  }
+  .sidebar-foot{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-family:var(--mono); font-size:10px; color:var(--text-faint); letter-spacing:.4px; line-height:1.8; }
+
+  /* ---- MAIN ---- */
+  .main{ margin-left:var(--sidebar); flex:1; min-width:0; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 32px 140px; }
+
+  /* ---- HERO ---- */
+  .hero{ padding:88px 0 54px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:9px;
+    font-family:var(--mono); font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--accent); padding:6px 13px; border:1px solid var(--border-bright);
+    border-radius:30px; background:var(--accent-glow); margin-bottom:26px;
+  }
+  .hero h2{
+    font-size:clamp(34px, 6vw, 56px); line-height:1.04; font-weight:800;
+    letter-spacing:-1.4px; margin-bottom:20px;
+  }
+  .hero h2 .grad{
+    color:var(--accent-strong);
+    background:none;
+    -webkit-background-clip:initial; background-clip:initial; -webkit-text-fill-color:currentColor;
+  }
+  .hero p.lead{ font-size:17.5px; color:var(--text-dim); max-width:620px; line-height:1.65; }
+  .hero-stats{ display:flex; flex-wrap:wrap; gap:14px; margin-top:34px; }
+  .stat{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:14px 18px; min-width:120px;
+  }
+  .stat .v{ font-family:var(--mono); font-size:22px; font-weight:700; color:var(--accent); }
+  .stat .l{ font-size:11.5px; color:var(--text-faint); letter-spacing:.5px; text-transform:uppercase; margin-top:2px; }
+
+  /* ---- SECTION / MODULE CARD ---- */
+  section{ scroll-margin-top:30px; margin-bottom:30px; }
+  .module{
+    background:linear-gradient(180deg, var(--panel), var(--bg-soft));
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:34px 34px 30px;
+    position:relative; overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 18px 40px -28px rgba(24,35,29,.28);
+  }
+  .module::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:linear-gradient(180deg, var(--accent), transparent 70%); opacity:.6;
+  }
+  .mod-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap; }
+  .mod-num{ font-family:var(--mono); font-size:13px; color:var(--accent); font-weight:700; letter-spacing:1px; }
+  .mod-head h3{ font-size:25px; font-weight:750; letter-spacing:-.5px; }
+  .mod-sub{ color:var(--text-dim); font-size:15px; margin-bottom:24px; max-width:640px; }
+
+  .module h4{
+    font-size:13px; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--text-faint); margin:26px 0 12px; display:flex; align-items:center; gap:9px;
+  }
+  .module h4::before{ content:""; width:14px; height:1.5px; background:var(--accent); display:inline-block; }
+  .module p{ color:var(--text-dim); margin-bottom:12px; }
+  .module strong{ color:var(--text); font-weight:650; }
+  .module a{ color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent-dim); }
+  code.inline{
+    font-family:var(--mono); font-size:.86em; background:var(--raised);
+    border:1px solid var(--border); padding:1.5px 6px; border-radius:6px; color:var(--code-accent);
+  }
+
+  /* ---- COMMAND BLOCK ---- */
+  .cmd{
+    position:relative; background:var(--terminal-bg); border:1px solid var(--terminal-border);
+    border-radius:10px; margin:10px 0 14px; overflow:hidden;
+  }
+  .cmd-bar{
+    display:flex; align-items:center; gap:7px; padding:9px 13px;
+    background:var(--terminal-bar); border-bottom:1px solid var(--terminal-border);
+  }
+  .cmd-bar .tl{ display:flex; gap:6px; }
+  .cmd-bar .tl i{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .tl i:nth-child(1){ background:#f08a78; } .tl i:nth-child(2){ background:var(--terminal-orange); } .tl i:nth-child(3){ background:var(--terminal-green); }
+  .cmd-bar .ttl{ font-family:var(--mono); font-size:11px; color:var(--terminal-dim); margin-left:6px; letter-spacing:.5px; }
+  .copy-btn{
+    margin-left:auto; font-family:var(--mono); font-size:11px;
+    background:var(--terminal-raised); color:var(--terminal-dim); border:1px solid var(--terminal-border);
+    padding:4px 11px; border-radius:6px; cursor:pointer; transition:all .18s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .copy-btn:hover{ color:var(--terminal-text); border-color:#536a57; background:#263227; }
+  .copy-btn.done{ color:var(--terminal-orange); border-color:#9a714d; }
+  .cmd pre{
+    font-family:var(--mono); font-size:13.5px; line-height:1.75;
+    padding:15px 16px; overflow-x:auto; color:var(--terminal-text);
+  }
+  .cmd pre .pr{ color:var(--terminal-orange); user-select:none; }
+  .cmd pre .cm{ color:var(--terminal-dim); }
+  .cmd pre .fl{ color:var(--terminal-orange); }
+  .cmd pre .st{ color:var(--terminal-green); }
+
+  /* ---- CALLOUTS ---- */
+  .callout{
+    border-radius:10px; padding:14px 16px 14px 16px; margin:14px 0;
+    border:1px solid var(--border); font-size:14.5px; position:relative; padding-left:46px;
+  }
+  .callout .ic{ position:absolute; left:15px; top:14px; font-size:16px; }
+  .callout.case{ background:linear-gradient(180deg, var(--sage-dim), transparent); border-color:rgba(40,104,64,.26); }
+  .callout.case .ic{ filter:drop-shadow(0 0 8px rgba(40,104,64,.28)); }
+  .callout.mistake{ background:var(--amber-dim); border-color:rgba(115,84,0,.24); }
+  .callout.danger{ background:var(--danger-dim); border-color:rgba(148,48,25,.26); }
+  .callout.practice{ background:linear-gradient(180deg, var(--accent-glow), transparent); border-color:var(--accent-dim); }
+  .callout b{ color:var(--text); }
+  .callout .tag{
+    font-family:var(--mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--text-faint); display:block; margin-bottom:3px;
+  }
+
+  /* ---- ACCORDION ---- */
+  .acc{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:6px 0; background:var(--panel); }
+  .acc-h{
+    display:flex; align-items:center; gap:12px; padding:13px 16px; cursor:pointer;
+    user-select:none; transition:background .18s;
+  }
+  .acc-h:hover{ background:var(--panel-2); }
+  .acc-h code{ font-family:var(--mono); font-size:13.5px; color:var(--accent); font-weight:600; }
+  .acc-h .desc{ color:var(--text-dim); font-size:13.5px; flex:1; }
+  .acc-h .chev{ color:var(--text-faint); transition:transform .25s var(--ease); font-size:13px; }
+  .acc.open .chev{ transform:rotate(90deg); color:var(--accent); }
+  .acc-body{ max-height:0; overflow:hidden; transition:max-height .3s var(--ease); }
+  .acc-body-inner{ padding:0 16px 15px 16px; color:var(--text-dim); font-size:14px; border-top:1px solid var(--border); padding-top:13px; }
+  .acc-body-inner code{ font-family:var(--mono); background:var(--raised); padding:1px 6px; border-radius:5px; color:var(--code-accent); font-size:12.5px; }
+
+  /* ---- PERMISSION VISUAL ---- */
+  .perm-vis{ display:flex; flex-wrap:wrap; gap:14px; margin:16px 0; }
+  .perm-group{
+    background:var(--panel); border:1px solid var(--border); border-radius:11px; padding:16px 18px; flex:1; min-width:150px; text-align:center;
+  }
+  .perm-group .who{ font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); margin-bottom:10px; }
+  .rwx{ display:flex; gap:8px; justify-content:center; }
+  .rwx .bit{
+    width:44px; height:44px; border-radius:9px; display:grid; place-content:center;
+    font-family:var(--mono); font-weight:700; font-size:18px; border:1px solid var(--border);
+    background:var(--raised); color:var(--text-faint);
+  }
+  .rwx .bit.on{ background:var(--accent-glow); border-color:var(--accent-dim); color:var(--accent); box-shadow:0 0 14px -4px var(--accent); }
+  .rwx .bit small{ display:block; font-size:8.5px; letter-spacing:.5px; color:var(--text-faint); font-weight:500; margin-top:2px; }
+  .perm-legend{ display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--text-dim); margin-top:6px; }
+  .perm-legend span b{ color:var(--accent); font-family:var(--mono); }
+  .chmod-calc{ font-family:var(--mono); text-align:center; margin-top:14px; font-size:15px; color:var(--text-dim); }
+  .chmod-calc b{ color:var(--accent); font-size:22px; }
+
+  /* ---- TERMINAL SIMULATOR ---- */
+  .term{
+    background:var(--terminal-bg); border:1px solid var(--terminal-border); border-radius:10px; overflow:hidden;
+    box-shadow:0 24px 60px -30px rgba(24,35,29,.55), 0 0 0 1px rgba(141,188,106,.06);
+    margin:14px 0;
+  }
+  .term-bar{ display:flex; align-items:center; gap:7px; padding:11px 14px; background:var(--terminal-bar); border-bottom:1px solid var(--terminal-border); }
+  .term-bar .ttl{ font-family:var(--mono); font-size:11px; color:var(--terminal-dim); margin-left:8px; }
+  .term-bar .hint{ margin-left:auto; font-family:var(--mono); font-size:10.5px; color:var(--terminal-dim); }
+  .term-body{
+    font-family:var(--mono); font-size:13px; line-height:1.65; padding:14px 16px;
+    height:300px; overflow-y:auto; color:var(--terminal-text);
+  }
+  .term-body .out{ white-space:pre-wrap; color:var(--terminal-text); }
+  .term-body .ok{ color:var(--terminal-green); }
+  .term-body .warn{ color:var(--terminal-orange); }
+  .term-body .err{ color:#f08a78; }
+  .term-body .muted{ color:var(--terminal-dim); }
+  .term-line{ display:flex; gap:8px; }
+  .term-line .ps{ color:var(--terminal-orange); white-space:nowrap; }
+  .term-line .ps .at{ color:var(--terminal-green); }
+  .term-input-row{ display:flex; gap:8px; align-items:center; }
+  .term-input-row .ps{ color:var(--terminal-orange); white-space:nowrap; }
+  #termInput{
+    flex:1; background:transparent; border:none; outline:none; color:var(--terminal-text);
+    font-family:var(--mono); font-size:13px; caret-color:var(--terminal-orange);
+  }
+
+  /* ---- FLOWCHART ---- */
+  .flow{ margin:8px 0; }
+  .flow-step{
+    display:flex; gap:16px; position:relative; padding-bottom:6px;
+  }
+  .flow-step:not(:last-child)::before{
+    content:""; position:absolute; left:17px; top:36px; bottom:-6px; width:2px;
+    background:linear-gradient(180deg, var(--border-bright), var(--border));
+  }
+  .flow-node{
+    width:36px; height:36px; flex-shrink:0; border-radius:50%;
+    background:var(--panel-2); border:1px solid var(--border-bright);
+    display:grid; place-content:center; font-family:var(--mono); font-weight:700;
+    font-size:14px; color:var(--accent); z-index:1; transition:all .25s;
+  }
+  .flow-step:hover .flow-node{ background:var(--accent-glow); border-color:var(--accent); box-shadow:0 0 16px -4px var(--accent); }
+  .flow-content{ padding-bottom:18px; flex:1; }
+  .flow-content .q{ font-weight:650; color:var(--text); font-size:15px; margin-bottom:5px; }
+  .flow-content .cmd-mini{
+    font-family:var(--mono); font-size:12.5px; color:var(--terminal-orange); background:var(--terminal-bg);
+    border:1px solid var(--terminal-border); border-radius:7px; padding:7px 11px; display:inline-block; margin-top:3px;
+  }
+  .flow-content .ans{ color:var(--text-dim); font-size:13.5px; margin-top:5px; }
+
+  /* ---- CHEATSHEET TABLE ---- */
+  .sheet-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+  #sheetSearch{
+    flex:1; min-width:200px; background:var(--panel); border:1px solid var(--border); border-radius:9px;
+    padding:10px 14px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; transition:border .18s;
+  }
+  #sheetSearch:focus{ border-color:var(--accent-dim); box-shadow:0 0 0 3px var(--accent-glow); }
+  .filters{ display:flex; gap:6px; flex-wrap:wrap; }
+  .filters button{
+    font-family:var(--mono); font-size:11px; padding:6px 12px; border-radius:20px; cursor:pointer;
+    background:var(--panel); border:1px solid var(--border); color:var(--text-dim); transition:all .18s;
+  }
+  .filters button:hover{ color:var(--text); border-color:var(--border-bright); }
+  .filters button.active{ background:var(--accent-glow); border-color:var(--accent-dim); color:var(--accent); }
+  .sheet-wrap{ border:1px solid var(--border); border-radius:11px; overflow:hidden; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  thead th{
+    text-align:left; padding:12px 14px; background:var(--panel-2); color:var(--text-faint);
+    font-family:var(--mono); font-size:10.5px; letter-spacing:1px; text-transform:uppercase; border-bottom:1px solid var(--border);
+  }
+  tbody td{ padding:11px 14px; border-bottom:1px solid var(--border); color:var(--text-dim); vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--panel); }
+  tbody td code{ font-family:var(--mono); color:var(--accent); font-size:12.5px; white-space:nowrap; }
+  .cat-tag{ font-family:var(--mono); font-size:10px; padding:2px 8px; border-radius:20px; background:var(--raised); color:var(--text-dim); border:1px solid var(--border); white-space:nowrap; }
+
+  /* ---- QUIZ ---- */
+  .quiz-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+  .quiz-score{
+    font-family:var(--mono); font-size:13px; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--border); padding:8px 15px; border-radius:30px;
+  }
+  .quiz-score b{ color:var(--accent); font-size:16px; }
+  .q-card{ background:var(--panel); border:1px solid var(--border); border-radius:11px; padding:18px 20px; margin-bottom:13px; }
+  .q-card .q-num{ font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:1px; }
+  .q-card .q-text{ font-weight:600; font-size:15.5px; margin:5px 0 14px; color:var(--text); }
+  .q-opts{ display:grid; gap:8px; }
+  .q-opt{
+    display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:8px; cursor:pointer;
+    background:var(--bg-soft); border:1px solid var(--border); transition:all .15s; font-size:14px; color:var(--text-dim);
+  }
+  .q-opt:hover{ border-color:var(--border-bright); color:var(--text); }
+  .q-opt .key{ font-family:var(--mono); font-size:12px; width:24px; height:24px; border-radius:6px; background:var(--raised); display:grid; place-content:center; color:var(--text-faint); flex-shrink:0; border:1px solid var(--border); }
+  .q-opt.correct{ background:var(--accent-glow); border-color:var(--accent-dim); color:var(--text); }
+  .q-opt.correct .key{ background:var(--accent-strong); color:#fff7f0; }
+  .q-opt.wrong{ background:var(--danger-dim); border-color:rgba(148,48,25,.34); color:var(--text); }
+  .q-opt.wrong .key{ background:var(--danger); color:#fff7f0; }
+  .q-opt.locked{ cursor:default; pointer-events:none; opacity:.85; }
+  .q-feedback{ font-family:var(--mono); font-size:12.5px; margin-top:11px; padding-top:11px; border-top:1px solid var(--border); display:none; }
+  .q-feedback.show{ display:block; }
+  .q-feedback.right{ color:var(--accent); }
+  .q-feedback.miss{ color:var(--amber); }
+  .quiz-reset{
+    font-family:var(--mono); font-size:12.5px; background:var(--raised); color:var(--text-dim);
+    border:1px solid var(--border); padding:9px 18px; border-radius:8px; cursor:pointer; margin-top:8px; transition:all .18s;
+  }
+  .quiz-reset:hover{ color:var(--text); border-color:var(--border-bright); }
+  .quiz-result{
+    margin-top:16px; padding:20px; border-radius:11px; text-align:center; display:none;
+    background:linear-gradient(180deg, var(--accent-glow), transparent); border:1px solid var(--accent-dim);
+  }
+  .quiz-result.show{ display:block; animation:fadeUp .5s var(--ease); }
+  .quiz-result .big{ font-family:var(--mono); font-size:38px; font-weight:800; color:var(--accent); }
+  .quiz-result .msg{ color:var(--text-dim); margin-top:4px; }
+
+  /* ---- FOOTER ---- */
+  .foot{ text-align:center; padding:40px 0 0; color:var(--text-faint); font-family:var(--mono); font-size:12px; letter-spacing:.4px; border-top:1px solid var(--border); margin-top:50px; }
+  .foot b{ color:var(--accent); }
+
+  /* ---- MOBILE NAV ---- */
+  .topbar{
+    display:none; position:fixed; top:0; left:0; right:0; height:58px; z-index:100;
+    background:rgba(249,250,246,.90); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border); align-items:center; padding:0 16px; gap:12px;
+  }
+  .topbar .mb-brand{ font-weight:700; font-size:14px; }
+  .topbar .mb-brand span{ color:var(--accent); font-family:var(--mono); }
+  .burger{
+    margin-left:auto; width:40px; height:40px; border-radius:9px; background:var(--panel);
+    border:1px solid var(--border); display:grid; place-content:center; cursor:pointer; gap:4px;
+  }
+  .burger i{ width:18px; height:2px; background:var(--text); display:block; border-radius:2px; transition:.25s; }
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(24,35,29,.32); z-index:85; }
+  .overlay.show{ display:block; }
+
+  /* ---- REVEAL ANIMATION ---- */
+  .reveal{ opacity:0; transform:translateY(26px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+  .reveal.in{ opacity:1; transform:none; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+    .reveal{ opacity:1; transform:none; }
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 1000px){
+    .sidebar{ transform:translateX(-100%); width:300px; box-shadow:30px 0 60px -20px rgba(0,0,0,.7); }
+    .sidebar.open{ transform:none; }
+    .main{ margin-left:0; }
+    .topbar{ display:flex; }
+    .wrap{ padding:0 18px 110px; }
+    .hero{ padding:84px 0 40px; }
+    .module{ padding:26px 20px 24px; }
+  }
+  @media (max-width: 560px){
+    body{ font-size:15px; }
+    .hero h2{ letter-spacing:-1px; }
+    .mod-head h3{ font-size:21px; }
+    .perm-group{ min-width:100%; }
+    .cmd pre{ font-size:12.5px; }
+    .hero-stats .stat{ flex:1; min-width:calc(50% - 7px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- MOBILE TOPBAR -->
+<div class="topbar">
+  <div class="mb-brand"><span>~/</span>linux-basics</div>
+  <div class="burger" id="burger" aria-label="Menu"><i></i><i></i><i></i></div>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><span>&gt;_</span></div>
+      <div>
+        <h1>Linux Ubuntu Basics</h1>
+        <p>DevOps Handbook</p>
+      </div>
+    </div>
+    <div class="meta-line"><span class="dot"></span> 15 MODULES · ~45 MIN · BAHASA INDONESIA</div>
+
+    <nav class="toc" id="toc">
+      <a href="#s1"><span class="num">01</span> Kenapa Linux Penting</a>
+      <a href="#s2"><span class="num">02</span> Terminal &amp; Navigation</a>
+      <a href="#s3"><span class="num">03</span> File &amp; Directory</a>
+      <a href="#s4"><span class="num">04</span> Permission &amp; Ownership</a>
+      <a href="#s5"><span class="num">05</span> Package Management</a>
+      <a href="#s6"><span class="num">06</span> Process &amp; Resource</a>
+      <a href="#s7"><span class="num">07</span> Service (systemd)</a>
+      <a href="#s8"><span class="num">08</span> Log &amp; Troubleshooting</a>
+      <a href="#s9"><span class="num">09</span> Networking Basic</a>
+      <a href="#s10"><span class="num">10</span> SSH Basic</a>
+      <a href="#s11"><span class="num">11</span> Web Server (Nginx)</a>
+      <a href="#s12"><span class="num">12</span> Mini Project</a>
+      <a href="#s13"><span class="num">13</span> Cheatsheet</a>
+      <a href="#s14"><span class="num">14</span> Troubleshooting Flow</a>
+      <a href="#s15"><span class="num">15</span> Quiz Interaktif</a>
+    </nav>
+
+    <div class="sidebar-foot">
+      MENTOR MODE · ENABLED<br/>
+      target: <b style="color:var(--accent)">Cloud / DevOps Eng</b>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="wrap">
+
+      <!-- HERO -->
+      <header class="hero reveal">
+        <div class="kicker"><span class="dot"></span> 3-MONTH DEVOPS TRACK · MISSING PIECE</div>
+        <h2>Linux Ubuntu untuk<br/><span class="grad">DevOps &amp; Cloud Engineer</span></h2>
+        <p class="lead">Lo udah pegang AWS, Docker, CI/CD. Tapi semua itu jalan di atas satu hal: <strong style="color:var(--text)">server Linux</strong>. Modul ini ngajarin command yang <em>beneran</em> dipakai tiap hari pas SSH ke EC2 — bukan teori, langsung praktek troubleshooting.</p>
+        <div class="hero-stats">
+          <div class="stat"><div class="v">15</div><div class="l">Modul</div></div>
+          <div class="stat"><div class="v">70+</div><div class="l">Command</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Mini Project</div></div>
+          <div class="stat"><div class="v">10</div><div class="l">Soal Quiz</div></div>
+        </div>
+      </header>
+
+      <!-- =================== 01 =================== -->
+      <section id="s1" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">01</span><h3>Kenapa Linux Penting</h3></div>
+          <p class="mod-sub">Sebelum hafal command, paham dulu kenapa Linux itu "tanah" tempat semua tool DevOps lo berdiri.</p>
+
+          <h4>Penjelasan Singkat</h4>
+          <p>Hampir <strong>semua server di dunia jalan di Linux</strong> — dan di AWS, mayoritas EC2 pakai Ubuntu atau Amazon Linux. Pas lo deploy Docker container, jalanin pipeline CI/CD, atau setup Kubernetes node, semuanya <strong>nempel di atas Linux</strong>. Jadi kalau lo nggak bisa baca log atau cek service di Linux, lo bakal stuck pas production error jam 2 pagi.</p>
+
+          <h4>Hubungan dengan Tool Lo</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>AWS EC2</code><span class="desc">Virtual server-nya = Ubuntu. Lo masuk via SSH.</span><span class="chev">▶</span></div>
+              <div class="acc-body"><div class="acc-body-inner">EC2 instance itu cuma "komputer Linux di cloud". Begitu launch, cara satu-satunya ngatur dia ya lewat terminal Linux. Tanpa skill ini, EC2 cuma kotak hitam.</div></div>
+            </div>
+            <div class="acc"><div class="acc-h"><code>Docker</code><span class="desc">Container = proses Linux yang diisolasi.</span><span class="chev">▶</span></div>
+              <div class="acc-body"><div class="acc-body-inner">Docker pakai fitur kernel Linux (namespaces &amp; cgroups). Pas <code>docker exec -it</code> masuk ke container, yang lo ketik ya command Linux yang sama persis.</div></div>
+            </div>
+            <div class="acc"><div class="acc-h"><code>Kubernetes</code><span class="desc">Tiap node = mesin Linux.</span><span class="chev">▶</span></div>
+              <div class="acc-body"><div class="acc-body-inner">Worker node K8s adalah server Linux. Debug pod yang crash sering berakhir di <code>journalctl</code> dan cek resource pakai command yang lo pelajari di sini.</div></div>
+            </div>
+            <div class="acc"><div class="acc-h"><code>CI/CD · GitHub Actions</code><span class="desc">Runner default = ubuntu-latest.</span><span class="chev">▶</span></div>
+              <div class="acc-body"><div class="acc-body-inner">Tiap step <code>run:</code> di workflow lo dieksekusi di shell Linux. Paham bash + Linux = paham kenapa pipeline lo gagal.</div></div>
+            </div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Mindset</span><b>Jangan hafal semua command.</b> Otak lo bukan Google. Yang penting: paham <b>pattern troubleshooting</b> — "ada masalah → cek apa dulu → command apa yang relevan". Sisanya tinggal <code class="inline">man</code> atau search.</div>
+
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Tulis 3 tool yang lo udah pelajari (AWS, Docker, dst) dan jawab: "kalau ini error, log-nya ada di Linux mana?" — nanti dijawab di modul 8.</div>
+        </div>
+      </section>
+
+      <!-- =================== 02 =================== -->
+      <section id="s2" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">02</span><h3>Basic Terminal &amp; Navigation</h3></div>
+          <p class="mod-sub">Begitu SSH masuk ke server, hal pertama: tahu lo <em>di mana</em> dan <em>siapa</em> lo. Ini fondasinya.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>pwd</code><span class="desc">Print Working Directory — lagi di folder mana?</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Output-nya path absolut, misal <code>/home/ubuntu</code>. Selalu cek ini sebelum jalanin command yang berhubungan dengan file.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>ls</code><span class="desc">List isi folder. Coba <code>ls -la</code>.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>ls -l</code> = detail (permission, size, tanggal). <code>-a</code> = tampilkan file hidden (yang diawali titik, seperti <code>.ssh</code>). <code>-h</code> = ukuran human-readable.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>cd</code><span class="desc">Change Directory — pindah folder.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>cd /var/log</code> pindah ke path. <code>cd ..</code> naik satu level. <code>cd ~</code> atau <code>cd</code> balik ke home. <code>cd -</code> balik ke folder sebelumnya.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>clear</code><span class="desc">Bersihin layar (atau Ctrl+L).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Cuma bersihin tampilan, history tetap aman.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>history</code><span class="desc">Lihat command yang pernah diketik.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Berguna banget buat inget command panjang. Tekan <code>↑</code> buat scroll command sebelumnya, atau <code>Ctrl+R</code> buat search.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>man</code><span class="desc">Manual — dokumentasi tiap command.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>man ls</code> buka manual lengkap. Tekan <code>q</code> buat keluar. Ini "Google offline" lo di server.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>whoami</code><span class="desc">Lagi login sebagai user siapa?</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Penting buat tahu apakah lo <code>ubuntu</code>, <code>root</code>, atau user lain — ngaruh ke permission.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>hostname</code><span class="desc">Nama server ini apa?</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Krusial pas lo buka banyak SSH session ke server berbeda biar nggak salah ketik command di server yang salah.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>uname -a</code><span class="desc">Info kernel &amp; arsitektur OS.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Nunjukin versi kernel Linux &amp; arsitektur (x86_64 / arm64). Berguna pas install software yang spesifik arsitektur.</div></div></div>
+          </div>
+
+          <h4>Contoh Real Case</h4>
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Baru SSH ke EC2 Ubuntu — gimana tahu gue lagi di folder mana &amp; server apa?" Jawab: <code class="inline">pwd</code> buat tahu folder, <code class="inline">hostname</code> buat tahu nama server, <code class="inline">whoami</code> buat tahu user. Tiga command ini = orientasi awal lo.</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">orientasi-awal.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>whoami
+<span class="cm"># ubuntu</span>
+<span class="pr">$ </span>hostname
+<span class="cm"># ip-172-31-8-42</span>
+<span class="pr">$ </span>pwd
+<span class="cm"># /home/ubuntu</span>
+<span class="pr">$ </span>uname <span class="fl">-a</span>
+<span class="cm"># Linux ip-172-31-8-42 5.15.0-aws x86_64 GNU/Linux</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Ketik command destruktif tanpa ngecek <b>posisi folder</b> dulu. Selalu <code class="inline">pwd</code> + <code class="inline">ls</code> sebelum hapus/pindah file.</div>
+
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Coba di <b>terminal simulator</b> di bawah ini → ketik <code class="inline">whoami</code>, <code class="inline">pwd</code>, lalu <code class="inline">uname -a</code>. (Ketik <code class="inline">help</code> buat lihat command yang tersedia.)</div>
+
+          <!-- TERMINAL SIMULATOR -->
+          <div class="term">
+            <div class="term-bar"><div class="tl" style="display:flex;gap:6px"><i style="width:11px;height:11px;border-radius:50%;background:#f08a78;display:inline-block"></i><i style="width:11px;height:11px;border-radius:50%;background:var(--terminal-orange);display:inline-block"></i><i style="width:11px;height:11px;border-radius:50%;background:var(--terminal-green);display:inline-block"></i></div><span class="ttl">ubuntu@ip-172-31-8-42: ~</span><span class="hint">type "help"</span></div>
+            <div class="term-body" id="termBody">
+              <div class="out muted">Welcome to Ubuntu 22.04 LTS (simulator). Ketik <span class="ok">help</span> buat mulai.</div>
+            </div>
+            <div class="term-body" style="height:auto;padding:0;border-top:1px solid var(--terminal-border)">
+              <div class="term-input-row" style="padding:12px 16px">
+                <span class="ps">ubuntu@server:~$</span>
+                <input id="termInput" autocomplete="off" spellcheck="false" placeholder="ketik command lalu Enter..." />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 03 =================== -->
+      <section id="s3" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">03</span><h3>File &amp; Directory Management</h3></div>
+          <p class="mod-sub">Bikin, copy, pindah, hapus, dan baca file. Roti-mentega kerjaan harian di server.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>mkdir</code><span class="desc">Bikin folder baru.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>mkdir app</code> bikin satu folder. <code>mkdir -p app/logs/2026</code> bikin folder bertingkat sekaligus.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>touch</code><span class="desc">Bikin file kosong / update timestamp.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>touch index.html</code> bikin file kosong kalau belum ada.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>cp</code><span class="desc">Copy file/folder.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>cp file.txt backup.txt</code>. Untuk folder pakai <code>-r</code> (recursive): <code>cp -r app/ app-backup/</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>mv</code><span class="desc">Pindah ATAU rename file.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>mv old.txt new.txt</code> = rename. <code>mv file.txt /tmp/</code> = pindah. Satu command, dua fungsi.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>rm</code><span class="desc">Hapus file. HATI-HATI.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>rm file.txt</code> hapus file. <code>rm -r folder/</code> hapus folder + isinya. Di Linux <b>nggak ada Recycle Bin</b> — sekali hapus, hilang.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>cat</code><span class="desc">Tampilkan SELURUH isi file.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Cocok buat file kecil (config, .env). Jangan buat file log raksasa — bakal nge-flood layar.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>less</code><span class="desc">Baca file besar per halaman.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Scroll dengan panah/PageUp-Down, search dengan <code>/keyword</code>, keluar dengan <code>q</code>. Pilihan aman buat file gede.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>head</code> / <code>tail</code><span class="desc">Lihat baris awal / akhir file.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>head -n 20 file</code> = 20 baris pertama. <code>tail -n 50 file</code> = 50 baris terakhir. <code>tail -f</code> = follow live (penting buat log!).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>nano</code><span class="desc">Text editor paling gampang.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>nano config.txt</code>. Edit, lalu <code>Ctrl+O</code> simpan, <code>Ctrl+X</code> keluar. Rekomendasi buat pemula.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>vim</code><span class="desc">Editor powerful (singkat aja dulu).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Cukup tahu cara keluar darurat: tekan <code>Esc</code> lalu ketik <code>:q!</code> + Enter (keluar tanpa simpan). Untuk simpan: <code>:wq</code>. Pelajari lebih dalam nanti — nano dulu cukup.</div></div></div>
+          </div>
+
+          <h4>Best Practice</h4>
+          <div class="callout danger"><span class="ic">💀</span><span class="tag">Bahaya</span><b>JANGAN PERNAH</b> ketik <code class="inline">rm -rf /</code> atau <code class="inline">rm -rf *</code> sembarangan. <code>rm -rf /</code> bisa <b>menghapus seluruh sistem</b>. Selalu baca dua kali path sebelum tekan Enter.</div>
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Hapus file tanpa <code class="inline">ls</code> dulu. Biasakan: <b>cek dengan <code>ls</code> → baru <code>rm</code></b>. Untuk file besar, pakai <code class="inline">less</code>/<code class="inline">tail</code>, bukan <code class="inline">cat</code>, biar terminal nggak nge-freeze.</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">file-workflow.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>mkdir <span class="fl">-p</span> project/src
+<span class="pr">$ </span>cd project
+<span class="pr">$ </span>touch app.py
+<span class="pr">$ </span>ls <span class="fl">-la</span>          <span class="cm"># cek dulu sebelum aksi apapun</span>
+<span class="pr">$ </span>cp app.py app.py.bak
+<span class="pr">$ </span>tail <span class="fl">-n</span> 20 app.py  <span class="cm"># lihat 20 baris terakhir</span></pre>
+          </div>
+
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Buat folder <code class="inline">demo</code>, masuk ke dalamnya, bikin file <code class="inline">test.txt</code>, lalu rename jadi <code class="inline">final.txt</code> pakai <code class="inline">mv</code>.</div>
+        </div>
+      </section>
+
+      <!-- =================== 04 =================== -->
+      <section id="s4" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">04</span><h3>Permission &amp; Ownership</h3></div>
+          <p class="mod-sub">Salah satu sumber error #1 di server: "Permission denied". Paham ini, separuh masalah lo kelar.</p>
+
+          <h4>Konsep: rwx</h4>
+          <p>Tiap file punya 3 jenis izin untuk 3 kelompok. <strong>r</strong> = read (baca), <strong>w</strong> = write (ubah), <strong>x</strong> = execute (jalankan). Tiga kelompoknya: <strong>Owner</strong> (pemilik), <strong>Group</strong>, dan <strong>Others</strong> (semua orang).</p>
+
+          <div class="perm-vis">
+            <div class="perm-group"><div class="who">Owner</div><div class="rwx"><div class="bit on">r<small>4</small></div><div class="bit on">w<small>2</small></div><div class="bit on">x<small>1</small></div></div></div>
+            <div class="perm-group"><div class="who">Group</div><div class="rwx"><div class="bit on">r<small>4</small></div><div class="bit">-<small>0</small></div><div class="bit on">x<small>1</small></div></div></div>
+            <div class="perm-group"><div class="who">Others</div><div class="rwx"><div class="bit on">r<small>4</small></div><div class="bit">-<small>0</small></div><div class="bit on">x<small>1</small></div></div></div>
+          </div>
+          <div class="chmod-calc">Owner (4+2+1=7) · Group (4+0+1=5) · Others (4+0+1=5) &nbsp;→&nbsp; <b>chmod 755</b></div>
+          <div class="perm-legend" style="justify-content:center;margin-top:14px">
+            <span><b>r = 4</b> read</span><span><b>w = 2</b> write</span><span><b>x = 1</b> execute</span>
+          </div>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>chmod</code><span class="desc">Ubah permission file.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>chmod 755 file</code> (angka) atau <code>chmod +x file</code> (tambah execute). <b>755</b> = owner full, lainnya read+execute (umum buat folder &amp; script). <b>644</b> = owner read+write, lainnya read aja (umum buat file biasa seperti index.html).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>chown</code><span class="desc">Ubah pemilik file.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo chown www-data:www-data index.html</code> bikin Nginx (user www-data) jadi pemilik file. Format: <code>chown user:group file</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo</code><span class="desc">Jalankan command sebagai root.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">"SuperUser DO". Dipakai buat aksi yang butuh hak admin (install, edit file sistem). <b>Pakai seperlunya</b> — jangan asal sudo semua.</div></div></div>
+          </div>
+
+          <h4>root vs Normal User</h4>
+          <p><strong>root</strong> = user super-admin, bisa apa aja, nggak ada rem. <strong>Normal user</strong> (misal <code class="inline">ubuntu</code>) = dibatasi, lebih aman. Best practice: kerja sebagai normal user, pakai <code class="inline">sudo</code> cuma pas perlu. Jangan login langsung sebagai root.</p>
+
+          <h4>Contoh Real Case</h4>
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Kenapa <code>./deploy.sh</code> nggak bisa jalan? Muncul <i>Permission denied</i>." → File-nya belum punya izin execute. Solusi: <code class="inline">chmod +x deploy.sh</code> lalu jalankan lagi.</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">fix-permission.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>./deploy.sh
+<span class="cm"># bash: ./deploy.sh: Permission denied</span>
+<span class="pr">$ </span>ls <span class="fl">-l</span> deploy.sh
+<span class="cm"># -rw-r--r--  (belum ada 'x')</span>
+<span class="pr">$ </span>chmod <span class="fl">+x</span> deploy.sh
+<span class="pr">$ </span>ls <span class="fl">-l</span> deploy.sh
+<span class="cm"># -rwxr-xr-x  (sekarang ada 'x') ✓</span>
+<span class="pr">$ </span>./deploy.sh   <span class="cm"># jalan!</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Asal <code class="inline">chmod 777</code> biar "semua bisa". Itu bahaya keamanan — semua orang bisa nulis file lo. Pakai <b>755</b> atau <b>644</b>, bukan 777.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Bikin file <code class="inline">run.sh</code>, cek permission-nya dengan <code class="inline">ls -l</code>, kasih izin execute, lalu cek lagi. Perhatikan perubahan <code class="inline">-rw-</code> jadi <code class="inline">-rwx</code>.</div>
+        </div>
+      </section>
+
+      <!-- =================== 05 =================== -->
+      <section id="s5" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">05</span><h3>Package Management (apt)</h3></div>
+          <p class="mod-sub">Install software di Ubuntu = pakai <code class="inline">apt</code>. Ibarat "App Store" buat server, tapi lewat terminal.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>sudo apt update</code><span class="desc">Refresh daftar paket terbaru.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Ini <b>bukan</b> meng-upgrade software, cuma update "katalog". Selalu jalankan ini <b>dulu</b> sebelum install apapun di server yang baru.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo apt upgrade</code><span class="desc">Upgrade software yang udah terinstall.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Update semua paket ke versi terbaru. Di production, lakukan dengan hati-hati (bisa restart service).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo apt install &lt;pkg&gt;</code><span class="desc">Install paket baru.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo apt install nginx -y</code>. Flag <code>-y</code> = auto-yes biar nggak ditanya konfirmasi.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo apt remove &lt;pkg&gt;</code><span class="desc">Hapus paket.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>apt remove</code> hapus software-nya. <code>apt purge</code> hapus sampai file config-nya juga.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>apt search &lt;kata&gt;</code><span class="desc">Cari nama paket.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lupa nama persis paketnya? <code>apt search docker</code> bakal nampilin kandidatnya.</div></div></div>
+          </div>
+
+          <h4>Contoh: Install Tool Wajib DevOps</h4>
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">setup-tools.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>sudo apt update
+<span class="pr">$ </span>sudo apt install curl git nginx unzip <span class="fl">-y</span>
+<span class="cm"># curl  → tes HTTP / download</span>
+<span class="cm"># git   → clone repo</span>
+<span class="cm"># nginx → web server</span>
+<span class="cm"># unzip → ekstrak file .zip</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Langsung <code class="inline">apt install</code> tanpa <code class="inline">apt update</code> dulu di server baru → bisa kena error "package not found" atau dapat versi lama. Urutannya selalu: <b>update → install</b>.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Jalankan <code class="inline">sudo apt update</code>, lalu install <code class="inline">htop</code> (tool monitoring yang kita pakai di modul berikutnya): <code class="inline">sudo apt install htop -y</code>.</div>
+        </div>
+      </section>
+
+      <!-- =================== 06 =================== -->
+      <section id="s6" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">06</span><h3>Process &amp; Resource Monitoring</h3></div>
+          <p class="mod-sub">"Server kok lemot?" — modul ini ngajarin cara cek CPU, RAM, dan disk biar lo nggak nebak-nebak.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>ps aux</code><span class="desc">Lihat semua proses yang jalan.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Snapshot proses + pemakaian CPU/RAM. Sering dikombinasi: <code>ps aux | grep nginx</code> buat cari proses tertentu.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>top</code><span class="desc">Monitor proses real-time (bawaan).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tampilan live, update tiap detik. Lihat proses yang paling rakus CPU/RAM di atas. Keluar dengan <code>q</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>htop</code><span class="desc">Versi top yang lebih enak dilihat.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Warna-warni, bisa scroll &amp; kill proses pakai mouse/keyboard. Install dulu: <code>sudo apt install htop</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>free -h</code><span class="desc">Cek pemakaian RAM.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>-h</code> = human readable (MB/GB). Lihat kolom <code>available</code> buat tahu RAM yang masih bisa dipakai.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>df -h</code><span class="desc">Cek sisa kapasitas disk.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lihat kolom <code>Use%</code>. Disk penuh (100%) = penyebab error yang sering kelewat! Fokus ke baris <code>/</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>du -sh</code><span class="desc">Ukuran folder tertentu.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>du -sh /var/log</code> = total ukuran folder log. Berguna buat nyari "siapa yang makan disk".</div></div></div>
+            <div class="acc"><div class="acc-h"><code>uptime</code><span class="desc">Server hidup berapa lama + load.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Angka <code>load average</code> nunjukin beban. Kalau jauh lebih tinggi dari jumlah CPU = server overload.</div></div></div>
+          </div>
+
+          <h4>Contoh Real Case</h4>
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Server terasa lambat, cek apa dulu?" Urutan cepat: <b>1)</b> <code class="inline">df -h</code> — disk penuh? <b>2)</b> <code class="inline">free -h</code> — RAM habis? <b>3)</b> <code class="inline">htop</code> / <code class="inline">top</code> — proses apa yang rakus CPU? Tiga ini ngungkap 90% penyebab lemot.</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">why-so-slow.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>df <span class="fl">-h</span>           <span class="cm"># disk penuh? lihat Use%</span>
+<span class="pr">$ </span>free <span class="fl">-h</span>         <span class="cm"># RAM habis? lihat available</span>
+<span class="pr">$ </span>top              <span class="cm"># proses rakus? lihat %CPU teratas</span>
+<span class="pr">$ </span>du <span class="fl">-sh</span> /var/log <span class="cm"># folder gemuk? sering log yang numpuk</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Langsung restart server pas lemot tanpa diagnosa. Cek dulu — sering penyebabnya <b>disk penuh</b> karena log nggak pernah dibersihin, bukan butuh restart.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Di simulator atas, ketik <code class="inline">df -h</code> dan <code class="inline">free -h</code>. Baca: disk pakai berapa persen? RAM tersisa berapa?</div>
+        </div>
+      </section>
+
+      <!-- =================== 07 =================== -->
+      <section id="s7" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">07</span><h3>Service Management (systemd)</h3></div>
+          <p class="mod-sub">Nginx, Docker, SSH — semua jalan sebagai "service". <code class="inline">systemctl</code> adalah remote control-nya.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>systemctl status &lt;svc&gt;</code><span class="desc">Cek service hidup atau mati.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Command yang <b>paling sering dipakai</b>. Cari tulisan <code>active (running)</code> berwarna hijau. Kalau merah <code>failed</code> = ada masalah.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo systemctl start &lt;svc&gt;</code><span class="desc">Nyalakan service.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Menjalankan service yang lagi mati. Efeknya langsung, tapi <b>nggak</b> bikin auto-start saat reboot.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo systemctl stop &lt;svc&gt;</code><span class="desc">Matikan service.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Hentikan service. Misal <code>sudo systemctl stop nginx</code> buat maintenance.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo systemctl restart &lt;svc&gt;</code><span class="desc">Stop lalu start lagi.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Wajib dipakai <b>setiap habis ngubah config</b>. Tanpa restart, perubahan config nggak kebaca.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo systemctl enable &lt;svc&gt;</code><span class="desc">Auto-start saat server reboot.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Penting! Tanpa <code>enable</code>, kalau EC2 di-reboot, Nginx lo nggak nyala otomatis dan website down.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sudo systemctl disable &lt;svc&gt;</code><span class="desc">Matikan auto-start.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Kebalikan enable. Service nggak akan nyala otomatis saat boot.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case · Nginx</span>Setelah install Nginx, lo mau pastikan dia <b>hidup sekarang</b> DAN <b>nyala otomatis</b> kalau server reboot. Kombinasinya: <code class="inline">sudo systemctl start nginx</code> + <code class="inline">sudo systemctl enable nginx</code>.</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">manage-nginx.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>sudo systemctl status nginx
+<span class="cm"># ● nginx.service - active (running) ✓</span>
+<span class="pr">$ </span>sudo systemctl enable nginx   <span class="cm"># auto-start saat reboot</span>
+<span class="pr">$ </span>sudo systemctl restart nginx  <span class="cm"># setelah edit config</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Edit config Nginx tapi lupa <code class="inline">restart</code> → bingung kenapa perubahan nggak muncul. Selalu restart setelah ubah config. Dan jangan lupa <code class="inline">enable</code> biar tahan reboot.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Di simulator, ketik <code class="inline">systemctl status nginx</code>. Perhatikan status <code class="inline">active (running)</code> berwarna hijau.</div>
+        </div>
+      </section>
+
+      <!-- =================== 08 =================== -->
+      <section id="s8" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">08</span><h3>Log &amp; Troubleshooting</h3></div>
+          <p class="mod-sub">90% debugging di server = baca log. Tahu log-nya di mana &amp; cara baca live = skill paling berharga.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>journalctl</code><span class="desc">Log terpusat dari systemd.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Semua log service modern ada di sini. <code>journalctl -e</code> langsung ke paling bawah (terbaru).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>journalctl -u nginx</code><span class="desc">Log service spesifik.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>-u</code> = unit (service). Tambah <code>-f</code> buat follow live: <code>journalctl -u nginx -f</code>. Ini cara cek kenapa Nginx gagal start.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>tail -f .../access.log</code><span class="desc">Lihat traffic masuk secara live.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo tail -f /var/log/nginx/access.log</code>. Tiap ada yang buka website lo, baris baru muncul. Keluar: <code>Ctrl+C</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>tail -f .../error.log</code><span class="desc">Lihat error Nginx secara live.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo tail -f /var/log/nginx/error.log</code>. Tempat <b>pertama</b> yang dicek kalau website error 502/500.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>dmesg</code><span class="desc">Log level kernel (hardware/sistem).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Singkatnya: buat masalah dalam (out-of-memory killer, disk error). <code>dmesg | tail</code> buat lihat yang terbaru.</div></div></div>
+          </div>
+
+          <h4>Lokasi Log Penting</h4>
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">log-locations</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="cm"># Nginx access (siapa yang akses)</span>
+/var/log/nginx/access.log
+<span class="cm"># Nginx error (kenapa gagal)</span>
+/var/log/nginx/error.log
+<span class="cm"># Log sistem umum</span>
+/var/log/syslog</pre>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Website nggak bisa diakses — cek log dari mana?" → Mulai dari <code class="inline">sudo systemctl status nginx</code>. Kalau service ok tapi tetap error, baca <code class="inline">sudo tail -f /var/log/nginx/error.log</code> sambil refresh browser. Error-nya bakal muncul live di situ.</div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Nebak-nebak penyebab error tanpa buka log. Log itu "kotak hitam" pesawat — di situ jawabannya. Biasakan <code class="inline">tail -f error.log</code> dulu sebelum panik.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Jawab pertanyaan dari modul 1: tiap tool (Docker, Nginx) log-nya di mana? Untuk Nginx → <code class="inline">/var/log/nginx/</code>. Untuk service systemd → <code class="inline">journalctl -u &lt;nama&gt;</code>.</div>
+        </div>
+      </section>
+
+      <!-- =================== 09 =================== -->
+      <section id="s9" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">09</span><h3>Networking Basic untuk DevOps</h3></div>
+          <p class="mod-sub">"Service jalan tapi nggak bisa dibuka dari browser" — biasanya masalah network/port/firewall. Ini toolkit-nya.</p>
+
+          <h4>Command Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>ip a</code><span class="desc">Lihat IP address server.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Nampilin IP privat server. (IP publik EC2 beda — lihat di AWS Console.) Ganti command lama <code>ifconfig</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>ping &lt;host&gt;</code><span class="desc">Tes konektivitas ke server lain.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>ping google.com</code>. Kalau ada balasan = jaringan keluar OK. Stop dengan <code>Ctrl+C</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>curl &lt;url&gt;</code><span class="desc">Tes HTTP dari terminal.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>curl localhost</code> ngecek apakah web server hidup dari dalam server itu sendiri. Senjata utama debugging web.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>wget &lt;url&gt;</code><span class="desc">Download file dari internet.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>wget https://.../file.zip</code>. Mirip curl tapi fokus ke download/simpan file.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>ss -tulpn</code><span class="desc">Port mana yang lagi "listen"?</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo ss -tulpn</code>. Cek apakah ada proses yang dengerin port 80/443. Pengganti modern dari <code>netstat</code> (yang sekarang dianggap legacy).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>ufw status</code><span class="desc">Cek firewall lokal Ubuntu.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo ufw status</code>. Lihat port mana yang dibuka/ditutup oleh firewall di dalam server.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>ufw allow 80 / 22</code><span class="desc">Buka port di firewall.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><code>sudo ufw allow 80</code> (HTTP), <code>sudo ufw allow 22</code> (SSH). <b>Hati-hati:</b> jangan blok port 22 atau lo kekunci dari server sendiri!</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Service running tapi nggak bisa diakses dari browser — cek apa aja?" Lapisan demi lapisan: <b>1)</b> <code class="inline">curl localhost</code> jalan? (kalau ya, web server OK). <b>2)</b> <code class="inline">sudo ss -tulpn</code> — port 80 listen? <b>3)</b> <code class="inline">sudo ufw status</code> — firewall blok? <b>4)</b> Di AWS: <b>Security Group</b> izinkan port 80? (ini sering banget kelupaan!).</div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">debug-network.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>curl localhost          <span class="cm"># web server jawab? (dalam server)</span>
+<span class="pr">$ </span>sudo ss <span class="fl">-tulpn</span>         <span class="cm"># port 80 listening?</span>
+<span class="pr">$ </span>sudo ufw status         <span class="cm"># firewall ubuntu blok port?</span>
+<span class="pr">$ </span>sudo ufw allow 80       <span class="cm"># buka HTTP kalau perlu</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Lupa <b>AWS Security Group</b>. Walau di dalam server semua hijau, kalau Security Group EC2 nggak izinin port 80, browser tetap nggak bisa konek. Ufw (dalam server) dan Security Group (di AWS) itu <b>dua firewall berbeda</b>.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Di simulator, ketik <code class="inline">curl localhost</code> lalu <code class="inline">ss -tulpn</code>. Lihat port mana yang muncul sebagai LISTEN.</div>
+        </div>
+      </section>
+
+      <!-- =================== 10 =================== -->
+      <section id="s10" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">10</span><h3>SSH Basic</h3></div>
+          <p class="mod-sub">Pintu masuk lo ke server. Tanpa SSH, EC2 cuma ikon di dashboard AWS. Ini cara bukanya.</p>
+
+          <h4>Konsep Inti</h4>
+          <p>SSH (Secure Shell) = cara aman buat "masuk" dan ngendaliin server dari laptop lo. Di AWS, lo masuk pakai <strong>private key</strong> (file <code class="inline">.pem</code>) — bukan password. Konsepnya pasangan kunci: <strong>private key</strong> (rahasia, simpan di laptop) &amp; <strong>public key</strong> (ditaruh di server). Cuma yang pegang private key cocok yang boleh masuk.</p>
+
+          <h4>Command Penting</h4>
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">ssh-login.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="cm"># Login pakai password (kalau diaktifkan)</span>
+<span class="pr">$ </span>ssh ubuntu@13.250.44.10
+
+<span class="cm"># Login ke EC2 pakai private key (.pem)</span>
+<span class="pr">$ </span>chmod 400 mykey.pem        <span class="cm"># amankan key dulu (wajib!)</span>
+<span class="pr">$ </span>ssh <span class="fl">-i</span> mykey.pem ubuntu@13.250.44.10</pre>
+          </div>
+
+          <h4>Folder ~/.ssh</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>~/.ssh/</code><span class="desc">Folder rahasia tempat config SSH.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Folder hidden di home. Isinya kunci dan catatan koneksi. Lihat dengan <code>ls -la ~/.ssh</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>known_hosts</code><span class="desc">Daftar server yang pernah lo masuki.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">SSH nyimpen "sidik jari" tiap server di sini. Kalau berubah, SSH bakal warning (proteksi dari serangan man-in-the-middle).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>authorized_keys</code><span class="desc">Public key yang boleh masuk ke server.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Di <b>sisi server</b>: <code>~/.ssh/authorized_keys</code>. Siapa pun yang public key-nya ada di sini, boleh login. Inilah yang AWS isi otomatis dari key pair lo.</div></div></div>
+          </div>
+
+          <h4>Password vs Private Key</h4>
+          <p><strong>Private key</strong> jauh lebih aman daripada password: nggak bisa ditebak/brute-force, dan itu standar di AWS. <strong>Password</strong> lebih praktis tapi rawan. Best practice DevOps: <strong>pakai key, matikan login password</strong>.</p>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>"Login ke EC2 Ubuntu via SSH." → Download <code class="inline">.pem</code> dari AWS, set permission ketat dengan <code class="inline">chmod 400 mykey.pem</code>, lalu <code class="inline">ssh -i mykey.pem ubuntu@&lt;public-ip&gt;</code>. User default Ubuntu di AWS = <code class="inline">ubuntu</code>.</div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Error <i>"UNPROTECTED PRIVATE KEY FILE"</i> = permission .pem terlalu terbuka. Fix: <code class="inline">chmod 400 mykey.pem</code>. Mistake lain: salah user (pakai <code>root@</code> padahal harusnya <code>ubuntu@</code>).</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Lihat isi folder SSH lo sendiri: <code class="inline">ls -la ~/.ssh</code>. Kenali file <code class="inline">known_hosts</code> dan kunci yang ada.</div>
+        </div>
+      </section>
+
+      <!-- =================== 11 =================== -->
+      <section id="s11" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">11</span><h3>Web Server Mini Module (Nginx)</h3></div>
+          <p class="mod-sub">Gabungin semua yang lo pelajari: install web server, jalanin, dan sajikan halaman ke dunia.</p>
+
+          <h4>Apa itu Web Server?</h4>
+          <p>Web server = program yang "mendengarkan" request dari browser di port 80 (HTTP) / 443 (HTTPS) dan ngirim balik halaman web. <strong>Nginx</strong> &amp; <strong>Apache</strong> adalah yang paling populer.</p>
+
+          <h4>Nginx vs Apache (singkat)</h4>
+          <p><strong>Nginx</strong> ringan, cepat, jago handle banyak koneksi sekaligus — favorit DevOps modern, sering jadi reverse proxy. <strong>Apache</strong> lebih tua, fleksibel dengan <code class="inline">.htaccess</code>. Untuk track DevOps/Cloud, <strong>fokus Nginx</strong> dulu.</p>
+
+          <h4>Folder Penting</h4>
+          <p>Secara default, Nginx menyajikan file dari <code class="inline">/var/www/html</code>. File <code class="inline">index.html</code> di situ = halaman depan website lo.</p>
+
+          <h4>Alur Lengkap</h4>
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">deploy-nginx.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="cm"># 1. Update & install</span>
+<span class="pr">$ </span>sudo apt update
+<span class="pr">$ </span>sudo apt install nginx <span class="fl">-y</span>
+
+<span class="cm"># 2. Pastikan jalan & aktif saat reboot</span>
+<span class="pr">$ </span>sudo systemctl status nginx
+<span class="pr">$ </span>sudo systemctl enable nginx
+
+<span class="cm"># 3. Tes dari dalam server</span>
+<span class="pr">$ </span>curl localhost
+
+<span class="cm"># 4. Edit halaman depan</span>
+<span class="pr">$ </span>cd /var/www/html
+<span class="pr">$ </span>echo <span class="st">"&lt;h1&gt;Hello from Ubuntu Server&lt;/h1&gt;"</span> | sudo tee index.html
+
+<span class="cm"># 5. Restart setelah perubahan</span>
+<span class="pr">$ </span>sudo systemctl restart nginx
+
+<span class="cm"># 6. Pantau log secara live</span>
+<span class="pr">$ </span>sudo tail <span class="fl">-f</span> /var/log/nginx/access.log
+<span class="pr">$ </span>sudo tail <span class="fl">-f</span> /var/log/nginx/error.log</pre>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Case</span>Setelah langkah di atas, buka browser ke <code class="inline">http://&lt;public-ip-ec2&gt;</code>. Muncul "Hello from Ubuntu Server"? Berarti dari install sampai serving — semua jalan. Setiap kali lo refresh, lihat baris baru muncul di <code class="inline">access.log</code>.</div>
+
+          <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span><code class="inline">echo ... > index.html</code> (tanpa sudo) gagal karena <code class="inline">/var/www/html</code> butuh hak root. Solusi: pakai <code class="inline">sudo tee</code> seperti contoh, atau edit dengan <code class="inline">sudo nano index.html</code>.</div>
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Di simulator, ketik <code class="inline">curl localhost</code> lalu <code class="inline">cat index.html</code>. Lihat HTML yang disajikan Nginx.</div>
+        </div>
+      </section>
+
+      <!-- =================== 12 =================== -->
+      <section id="s12" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">12</span><h3>Mini Project Akhir</h3></div>
+          <p class="mod-sub">"Deploy Static Website Sederhana di Ubuntu Server" — gabungkan semua modul jadi satu workflow nyata.</p>
+
+          <div class="flow">
+            <div class="flow-step"><div class="flow-node">1</div><div class="flow-content"><div class="q">SSH ke server EC2</div><div class="cmd-mini">ssh -i mykey.pem ubuntu@&lt;public-ip&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">2</div><div class="flow-content"><div class="q">Update package list</div><div class="cmd-mini">sudo apt update</div></div></div>
+            <div class="flow-step"><div class="flow-node">3</div><div class="flow-content"><div class="q">Install Nginx</div><div class="cmd-mini">sudo apt install nginx -y</div></div></div>
+            <div class="flow-step"><div class="flow-node">4</div><div class="flow-content"><div class="q">Buat halaman HTML sederhana</div><div class="cmd-mini">echo "&lt;h1&gt;My First Deploy 🚀&lt;/h1&gt;" | sudo tee /var/www/html/index.html</div></div></div>
+            <div class="flow-step"><div class="flow-node">5</div><div class="flow-content"><div class="q">Pastikan port 80 dibuka</div><div class="cmd-mini">sudo ufw allow 80</div><div class="ans">Jangan lupa: izinkan port 80 juga di <b>AWS Security Group</b>.</div></div></div>
+            <div class="flow-step"><div class="flow-node">6</div><div class="flow-content"><div class="q">Tes via curl</div><div class="cmd-mini">curl localhost</div></div></div>
+            <div class="flow-step"><div class="flow-node">7</div><div class="flow-content"><div class="q">Tes via browser</div><div class="cmd-mini">http://&lt;public-ip&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">8</div><div class="flow-content"><div class="q">Cek log akses</div><div class="cmd-mini">sudo tail -f /var/log/nginx/access.log</div></div></div>
+            <div class="flow-step"><div class="flow-node">9</div><div class="flow-content"><div class="q">Restart service</div><div class="cmd-mini">sudo systemctl restart nginx</div></div></div>
+            <div class="flow-step"><div class="flow-node">10</div><div class="flow-content"><div class="q">Dokumentasikan command yang dipakai</div><div class="ans">Simpan semua command ke file <code style="font-family:var(--mono);color:var(--code-accent)">deploy-notes.md</code> — ini bekal lo bikin script otomatis nanti.</div></div></div>
+          </div>
+
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Challenge</span>Lakukan 10 langkah ini di EC2 lo sendiri. Kalau di langkah 7 browser nggak kebuka padahal <code class="inline">curl localhost</code> jalan → balik ke modul 9 (cek Security Group!).</div>
+        </div>
+      </section>
+
+      <!-- =================== 13 =================== -->
+      <section id="s13" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">13</span><h3>Cheatsheet DevOps Linux</h3></div>
+          <p class="mod-sub">Referensi cepat semua command. Search atau filter berdasarkan kategori.</p>
+
+          <div class="sheet-controls">
+            <input id="sheetSearch" placeholder="🔍 cari command atau fungsi... (mis. 'log', 'disk', 'nginx')" />
+          </div>
+          <div class="filters" id="sheetFilters">
+            <button class="active" data-cat="all">Semua</button>
+            <button data-cat="Navigation">Navigation</button>
+            <button data-cat="File">File</button>
+            <button data-cat="Permission">Permission</button>
+            <button data-cat="Package">Package</button>
+            <button data-cat="Service">Service</button>
+            <button data-cat="Logs">Logs</button>
+            <button data-cat="Network">Network</button>
+            <button data-cat="Web Server">Web Server</button>
+          </div>
+
+          <div class="sheet-wrap">
+            <table id="sheet">
+              <thead><tr><th>Kategori</th><th>Command</th><th>Fungsi</th><th>Contoh</th></tr></thead>
+              <tbody>
+                <tr data-cat="Navigation"><td><span class="cat-tag">Navigation</span></td><td><code>pwd</code></td><td>Lokasi folder sekarang</td><td><code>pwd</code></td></tr>
+                <tr data-cat="Navigation"><td><span class="cat-tag">Navigation</span></td><td><code>ls -la</code></td><td>List file + detail + hidden</td><td><code>ls -la /var</code></td></tr>
+                <tr data-cat="Navigation"><td><span class="cat-tag">Navigation</span></td><td><code>cd</code></td><td>Pindah folder</td><td><code>cd /var/log</code></td></tr>
+                <tr data-cat="Navigation"><td><span class="cat-tag">Navigation</span></td><td><code>whoami</code></td><td>User login sekarang</td><td><code>whoami</code></td></tr>
+                <tr data-cat="Navigation"><td><span class="cat-tag">Navigation</span></td><td><code>uname -a</code></td><td>Info kernel &amp; OS</td><td><code>uname -a</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>mkdir -p</code></td><td>Buat folder (bertingkat)</td><td><code>mkdir -p a/b/c</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>cp -r</code></td><td>Copy file/folder</td><td><code>cp -r src/ bak/</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>mv</code></td><td>Pindah / rename</td><td><code>mv a.txt b.txt</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>rm -r</code></td><td>Hapus (HATI-HATI)</td><td><code>rm -r folder/</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>cat</code></td><td>Tampilkan isi file</td><td><code>cat .env</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>tail -f</code></td><td>Ikuti file live</td><td><code>tail -f app.log</code></td></tr>
+                <tr data-cat="File"><td><span class="cat-tag">File</span></td><td><code>nano</code></td><td>Edit file (mudah)</td><td><code>nano config.txt</code></td></tr>
+                <tr data-cat="Permission"><td><span class="cat-tag">Permission</span></td><td><code>chmod +x</code></td><td>Beri izin execute</td><td><code>chmod +x run.sh</code></td></tr>
+                <tr data-cat="Permission"><td><span class="cat-tag">Permission</span></td><td><code>chmod 644</code></td><td>File: owner rw, lain r</td><td><code>chmod 644 index.html</code></td></tr>
+                <tr data-cat="Permission"><td><span class="cat-tag">Permission</span></td><td><code>chown</code></td><td>Ubah pemilik file</td><td><code>sudo chown www-data f</code></td></tr>
+                <tr data-cat="Permission"><td><span class="cat-tag">Permission</span></td><td><code>sudo</code></td><td>Jalankan sebagai root</td><td><code>sudo apt update</code></td></tr>
+                <tr data-cat="Package"><td><span class="cat-tag">Package</span></td><td><code>apt update</code></td><td>Refresh daftar paket</td><td><code>sudo apt update</code></td></tr>
+                <tr data-cat="Package"><td><span class="cat-tag">Package</span></td><td><code>apt install</code></td><td>Install paket</td><td><code>sudo apt install git -y</code></td></tr>
+                <tr data-cat="Package"><td><span class="cat-tag">Package</span></td><td><code>apt remove</code></td><td>Hapus paket</td><td><code>sudo apt remove nginx</code></td></tr>
+                <tr data-cat="Package"><td><span class="cat-tag">Package</span></td><td><code>apt search</code></td><td>Cari paket</td><td><code>apt search docker</code></td></tr>
+                <tr data-cat="Service"><td><span class="cat-tag">Service</span></td><td><code>systemctl status</code></td><td>Cek status service</td><td><code>systemctl status nginx</code></td></tr>
+                <tr data-cat="Service"><td><span class="cat-tag">Service</span></td><td><code>systemctl restart</code></td><td>Restart service</td><td><code>sudo systemctl restart nginx</code></td></tr>
+                <tr data-cat="Service"><td><span class="cat-tag">Service</span></td><td><code>systemctl enable</code></td><td>Auto-start saat boot</td><td><code>sudo systemctl enable nginx</code></td></tr>
+                <tr data-cat="Logs"><td><span class="cat-tag">Logs</span></td><td><code>journalctl -u</code></td><td>Log service tertentu</td><td><code>journalctl -u nginx -f</code></td></tr>
+                <tr data-cat="Logs"><td><span class="cat-tag">Logs</span></td><td><code>tail -f</code></td><td>Pantau log live</td><td><code>tail -f error.log</code></td></tr>
+                <tr data-cat="Logs"><td><span class="cat-tag">Logs</span></td><td><code>dmesg</code></td><td>Log kernel/sistem</td><td><code>dmesg | tail</code></td></tr>
+                <tr data-cat="Logs"><td><span class="cat-tag">Logs</span></td><td><code>df -h</code></td><td>Cek disk (sering = log penuh)</td><td><code>df -h</code></td></tr>
+                <tr data-cat="Network"><td><span class="cat-tag">Network</span></td><td><code>ip a</code></td><td>Lihat IP address</td><td><code>ip a</code></td></tr>
+                <tr data-cat="Network"><td><span class="cat-tag">Network</span></td><td><code>curl</code></td><td>Tes HTTP</td><td><code>curl localhost</code></td></tr>
+                <tr data-cat="Network"><td><span class="cat-tag">Network</span></td><td><code>ss -tulpn</code></td><td>Port yang listening</td><td><code>sudo ss -tulpn</code></td></tr>
+                <tr data-cat="Network"><td><span class="cat-tag">Network</span></td><td><code>ufw allow</code></td><td>Buka port firewall</td><td><code>sudo ufw allow 80</code></td></tr>
+                <tr data-cat="Web Server"><td><span class="cat-tag">Web Server</span></td><td><code>apt install nginx</code></td><td>Install web server</td><td><code>sudo apt install nginx -y</code></td></tr>
+                <tr data-cat="Web Server"><td><span class="cat-tag">Web Server</span></td><td><code>/var/www/html</code></td><td>Folder file web</td><td><code>cd /var/www/html</code></td></tr>
+                <tr data-cat="Web Server"><td><span class="cat-tag">Web Server</span></td><td><code>curl localhost</code></td><td>Tes web server lokal</td><td><code>curl localhost</code></td></tr>
+                <tr data-cat="Web Server"><td><span class="cat-tag">Web Server</span></td><td><code>access.log</code></td><td>Log traffic masuk</td><td><code>tail -f /var/log/nginx/access.log</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="noResult" style="display:none;text-align:center;padding:24px;color:var(--text-faint);font-family:var(--mono);font-size:13px">// tidak ada command yang cocok</div>
+        </div>
+      </section>
+
+      <!-- =================== 14 =================== -->
+      <section id="s14" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">14</span><h3>Troubleshooting Flow</h3></div>
+          <p class="mod-sub">"Website down!" — jangan panik. Ikuti urutan ini dari atas ke bawah. Hampir selalu ketemu di salah satu langkah.</p>
+
+          <div class="flow">
+            <div class="flow-step"><div class="flow-node">1</div><div class="flow-content"><div class="q">Server-nya hidup?</div><div class="ans">Coba SSH atau cek di AWS Console apakah instance "running".</div><div class="cmd-mini">ssh ubuntu@&lt;ip&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">2</div><div class="flow-content"><div class="q">SSH bisa masuk?</div><div class="ans">Kalau nggak bisa → masalah jaringan/Security Group/key.</div><div class="cmd-mini">ssh -i key.pem ubuntu@&lt;ip&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">3</div><div class="flow-content"><div class="q">Service Nginx jalan?</div><div class="cmd-mini">sudo systemctl status nginx</div><div class="ans">Kalau <code style="color:var(--danger);font-family:var(--mono)">failed</code> → <code style="font-family:var(--mono);color:var(--code-accent)">sudo systemctl restart nginx</code></div></div></div>
+            <div class="flow-step"><div class="flow-node">4</div><div class="flow-content"><div class="q">Port 80 listening?</div><div class="cmd-mini">sudo ss -tulpn | grep :80</div></div></div>
+            <div class="flow-step"><div class="flow-node">5</div><div class="flow-content"><div class="q">Firewall blok?</div><div class="cmd-mini">sudo ufw status</div><div class="ans">Cek juga <b>AWS Security Group</b> — dua firewall berbeda!</div></div></div>
+            <div class="flow-step"><div class="flow-node">6</div><div class="flow-content"><div class="q">Apa kata log Nginx?</div><div class="cmd-mini">sudo tail -f /var/log/nginx/error.log</div></div></div>
+            <div class="flow-step"><div class="flow-node">7</div><div class="flow-content"><div class="q">Disk penuh?</div><div class="cmd-mini">df -h</div><div class="ans">Use% di 100%? Penyebab tersembunyi yang sering kelupaan.</div></div></div>
+            <div class="flow-step"><div class="flow-node">8</div><div class="flow-content"><div class="q">Restart service kalau perlu</div><div class="cmd-mini">sudo systemctl restart nginx</div><div class="ans">Langkah terakhir setelah penyebab ketemu &amp; diperbaiki.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🧭</span><span class="tag">Prinsip</span>Troubleshooting itu <b>berlapis dari luar ke dalam</b>: server → akses → service → port → firewall → log → resource. Jangan loncat-loncat. Disiplin ngikutin urutan = nemu masalah lebih cepat daripada nebak.</div>
+        </div>
+      </section>
+
+      <!-- =================== 15 =================== -->
+      <section id="s15" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">15</span><h3>Quiz Interaktif</h3></div>
+          <p class="mod-sub">Uji pemahaman lo. 10 soal, langsung dapat skor &amp; feedback. Klik jawaban yang menurut lo benar.</p>
+
+          <div class="quiz-head">
+            <div class="quiz-score">Skor: <b id="scoreNow">0</b> / 10 &nbsp;·&nbsp; Terjawab: <span id="answeredNow">0</span></div>
+            <button class="quiz-reset" id="quizReset">↻ Reset Quiz</button>
+          </div>
+
+          <div id="quiz"></div>
+
+          <div class="quiz-result" id="quizResult">
+            <div class="big" id="resultScore">0/10</div>
+            <div class="msg" id="resultMsg"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="foot">
+        <b>&gt;_ Linux Ubuntu Basics</b> · Interactive Handbook untuk DevOps / Cloud Engineer<br/>
+        Dibuat sebagai materi belajar · Bahasa Indonesia · 2026
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   DATA — Quiz
+   ============================================================ */
+const QUIZ = [
+  { q: "Command untuk melihat disk usage (sisa kapasitas penyimpanan)?",
+    o: ["du -a", "df -h", "free -h", "ls -l"], a: 1,
+    e: "df -h menampilkan pemakaian disk per filesystem (human-readable)." },
+  { q: "Command untuk melihat status service nginx?",
+    o: ["nginx status", "service show nginx", "systemctl status nginx", "ps nginx"], a: 2,
+    e: "systemctl status nginx — cari 'active (running)' berwarna hijau." },
+  { q: "Command untuk melihat log secara realtime (live)?",
+    o: ["cat log", "tail -f", "head log", "less log"], a: 1,
+    e: "tail -f mengikuti file dan menampilkan baris baru secara live." },
+  { q: "Command untuk memberi izin executable ke sebuah script?",
+    o: ["chmod +x deploy.sh", "chown +x deploy.sh", "exec deploy.sh", "chmod -r deploy.sh"], a: 0,
+    e: "chmod +x menambahkan permission execute sehingga ./deploy.sh bisa dijalankan." },
+  { q: "Command untuk melihat port yang sedang listening?",
+    o: ["ip a", "ping localhost", "ss -tulpn", "curl ports"], a: 2,
+    e: "ss -tulpn (pengganti modern netstat) menampilkan port yang listening." },
+  { q: "Sebelum install paket di server baru, sebaiknya jalankan dulu?",
+    o: ["apt upgrade", "apt search", "apt update", "apt clean"], a: 2,
+    e: "apt update me-refresh katalog paket. Urutannya: update → install." },
+  { q: "Untuk tahu lagi berada di folder mana setelah SSH, pakai?",
+    o: ["whoami", "pwd", "hostname", "cd"], a: 1,
+    e: "pwd = Print Working Directory, menampilkan path folder saat ini." },
+  { q: "Folder default tempat Nginx menyajikan file website?",
+    o: ["/etc/nginx", "/home/html", "/var/www/html", "/usr/web"], a: 2,
+    e: "/var/www/html — index.html di sini jadi halaman depan." },
+  { q: "Agar Nginx otomatis nyala setelah server reboot, command-nya?",
+    o: ["systemctl start nginx", "systemctl enable nginx", "systemctl restart nginx", "systemctl reload nginx"], a: 1,
+    e: "enable membuat service auto-start saat boot. start hanya menyalakan sekarang." },
+  { q: "Website tak bisa dibuka dari browser padahal 'curl localhost' jalan. Paling sering karena?",
+    o: ["Disk penuh", "Nginx belum diinstall", "Port 80 belum diizinkan di AWS Security Group", "Salah ketik hostname"], a: 2,
+    e: "curl localhost OK = server lokal sehat. Yang blok akses luar biasanya Security Group / firewall." },
+];
+
+/* ============================================================
+   DATA — Terminal Simulator outputs
+   ============================================================ */
+const TERM = {
+  "help": { cls:"out", t:
+`Command demo yang tersedia di simulator ini:
+  whoami        pwd           hostname      uname -a
+  ls            ls -la        cat index.html
+  df -h         free -h       uptime        ps aux
+  ip a          ss -tulpn     curl localhost
+  systemctl status nginx      clear         help` },
+  "whoami": { cls:"out", t:"ubuntu" },
+  "pwd": { cls:"out", t:"/home/ubuntu" },
+  "hostname": { cls:"out", t:"ip-172-31-8-42" },
+  "uname -a": { cls:"out", t:"Linux ip-172-31-8-42 5.15.0-1051-aws #56-Ubuntu SMP x86_64 GNU/Linux" },
+  "ls": { cls:"out", t:"app  deploy.sh  index.html  logs" },
+  "ls -la": { cls:"out", t:
+`total 28
+drwxr-xr-x 4 ubuntu ubuntu 4096 Jun 11 09:14 .
+drwxr-xr-x 3 root   root   4096 Jun 10 22:01 ..
+drwxr-xr-x 2 ubuntu ubuntu 4096 Jun 11 09:10 app
+-rwxr-xr-x 1 ubuntu ubuntu  214 Jun 11 09:12 deploy.sh
+-rw-r--r-- 1 ubuntu ubuntu   41 Jun 11 09:14 index.html
+drwxr-xr-x 2 ubuntu ubuntu 4096 Jun 11 09:09 logs` },
+  "cat index.html": { cls:"out", t:"<h1>Hello from Ubuntu Server</h1>" },
+  "df -h": { cls:"out", t:
+`Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        20G  6.4G   13G  34% /
+tmpfs           1.9G     0  1.9G   0% /dev/shm
+/dev/xvda15     105M  6.1M   99M   6% /boot/efi` },
+  "free -h": { cls:"out", t:
+`               total        used        free      available
+Mem:           3.8Gi       742Mi       2.4Gi       2.9Gi
+Swap:             0B          0B          0B` },
+  "uptime": { cls:"out", t:" 09:21:42 up 2 days,  4:18,  1 user,  load average: 0.08, 0.12, 0.09" },
+  "ps aux": { cls:"out", t:
+`USER     PID %CPU %MEM    VSZ   RSS COMMAND
+root       1  0.0  0.3 168120 11200 /sbin/init
+www-data 842  0.0  0.4 145020 17800 nginx: worker process
+ubuntu  1503  0.0  0.2  17560  9200 -bash` },
+  "ip a": { cls:"out", t:
+`2: eth0: <BROADCAST,MULTICAST,UP> mtu 9001
+    inet 172.31.8.42/20 brd 172.31.15.255 scope global eth0` },
+  "ss -tulpn": { cls:"out", t:
+`Netid State  Local Address:Port   Process
+tcp   LISTEN 0.0.0.0:22           sshd
+tcp   LISTEN 0.0.0.0:80           nginx` },
+  "curl localhost": { cls:"out", t:"<h1>Hello from Ubuntu Server</h1>" },
+  "systemctl status nginx": { cls:"ok", t:
+`● nginx.service - A high performance web server
+   Loaded: loaded (/lib/systemd/system/nginx.service; enabled)
+   Active: active (running) since Jun 11 09:08; 13min ago
+   Tasks: 2  Memory: 9.4M` },
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ---- COPY BUTTONS ---- */
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pre = btn.closest('.cmd').querySelector('pre');
+      // ambil teks asli, buang baris komentar prompt jika perlu
+      const text = pre.innerText.replace(/^\$ /gm, '').replace(/^\s*#.*$/gm, '').replace(/\n{2,}/g,'\n').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const old = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('done');
+        setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1500);
+      }).catch(()=>{ btn.textContent='⚠ gagal'; setTimeout(()=>btn.textContent='Copy',1500); });
+    });
+  });
+
+  /* ---- ACCORDION ---- */
+  document.querySelectorAll('.acc-h').forEach(h => {
+    h.addEventListener('click', () => {
+      const acc = h.closest('.acc');
+      const body = acc.querySelector('.acc-body');
+      const open = acc.classList.toggle('open');
+      body.style.maxHeight = open ? body.scrollHeight + 'px' : '0';
+    });
+  });
+
+  /* ---- PROGRESS BAR ---- */
+  const prog = document.getElementById('progress');
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  };
+  window.addEventListener('scroll', onScroll, { passive:true });
+  onScroll();
+
+  /* ---- REVEAL ON SCROLL ---- */
+  const revObs = new IntersectionObserver((entries) => {
+    entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add('in'); revObs.unobserve(en.target); } });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+  /* ---- ACTIVE TOC HIGHLIGHT ---- */
+  const links = [...document.querySelectorAll('.toc a')];
+  const map = {};
+  links.forEach(a => map[a.getAttribute('href').slice(1)] = a);
+  const tocObs = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting){
+        links.forEach(l => l.classList.remove('active'));
+        const a = map[en.target.id];
+        if (a){ a.classList.add('active'); a.scrollIntoView({ block:'nearest' }); }
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('section[id]').forEach(s => tocObs.observe(s));
+
+  /* ---- MOBILE NAV ---- */
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const burger = document.getElementById('burger');
+  const toggleNav = (open) => {
+    sidebar.classList.toggle('open', open);
+    overlay.classList.toggle('show', open);
+  };
+  burger.addEventListener('click', () => toggleNav(!sidebar.classList.contains('open')));
+  overlay.addEventListener('click', () => toggleNav(false));
+  document.querySelectorAll('.toc a').forEach(a => a.addEventListener('click', () => toggleNav(false)));
+
+  /* ---- CHEATSHEET FILTER + SEARCH ---- */
+  const rows = [...document.querySelectorAll('#sheet tbody tr')];
+  const search = document.getElementById('sheetSearch');
+  const noResult = document.getElementById('noResult');
+  let activeCat = 'all';
+  const applyFilter = () => {
+    const q = search.value.toLowerCase().trim();
+    let shown = 0;
+    rows.forEach(r => {
+      const okCat = activeCat === 'all' || r.dataset.cat === activeCat;
+      const okText = !q || r.innerText.toLowerCase().includes(q);
+      const vis = okCat && okText;
+      r.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    });
+    noResult.style.display = shown ? 'none' : 'block';
+  };
+  document.querySelectorAll('#sheetFilters button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#sheetFilters button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      activeCat = b.dataset.cat;
+      applyFilter();
+    });
+  });
+  search.addEventListener('input', applyFilter);
+
+  /* ---- TERMINAL SIMULATOR ---- */
+  const termBody = document.getElementById('termBody');
+  const termInput = document.getElementById('termInput');
+  const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const printLine = (cmd) => {
+    const d = document.createElement('div');
+    d.className = 'term-line';
+    d.innerHTML = '<span class="ps">ubuntu@server:~$</span><span>' + esc(cmd) + '</span>';
+    termBody.appendChild(d);
+  };
+  const printOut = (cls, text) => {
+    const d = document.createElement('div');
+    d.className = 'out ' + (cls || '');
+    d.innerHTML = esc(text);
+    termBody.appendChild(d);
+  };
+  const runTerm = (raw) => {
+    const cmd = raw.trim().replace(/\s+/g,' ');
+    if (!cmd) return;
+    if (cmd === 'clear') { termBody.innerHTML = ''; return; }
+    printLine(cmd);
+    const key = cmd.replace(/^sudo /,'');
+    if (TERM[key]) { printOut(TERM[key].cls, TERM[key].t); }
+    else { printOut('err', cmd.split(' ')[0] + ': command not found  —  ketik "help" buat lihat command yang tersedia'); }
+    termBody.scrollTop = termBody.scrollHeight;
+  };
+  if (termInput) {
+    termInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { runTerm(termInput.value); termInput.value=''; }
+    });
+    // klik area terminal → fokus input
+    termBody.parentElement.parentElement.addEventListener('click', () => termInput.focus());
+  }
+
+  /* ---- QUIZ ---- */
+  const quizEl = document.getElementById('quiz');
+  const scoreNow = document.getElementById('scoreNow');
+  const answeredNow = document.getElementById('answeredNow');
+  const result = document.getElementById('quizResult');
+  const resultScore = document.getElementById('resultScore');
+  const resultMsg = document.getElementById('resultMsg');
+  const KEYS = ['A','B','C','D'];
+  let score = 0, answered = 0;
+  const answeredSet = new Set();
+
+  function buildQuiz(){
+    quizEl.innerHTML = '';
+    score = 0; answered = 0; answeredSet.clear();
+    scoreNow.textContent = '0'; answeredNow.textContent = '0';
+    result.classList.remove('show');
+    QUIZ.forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'q-card';
+      let opts = '';
+      item.o.forEach((opt, j) => {
+        opts += `<div class="q-opt" data-q="${i}" data-o="${j}"><span class="key">${KEYS[j]}</span><span>${opt}</span></div>`;
+      });
+      card.innerHTML = `<div class="q-num">SOAL ${String(i+1).padStart(2,'0')}</div>
+        <div class="q-text">${item.q}</div>
+        <div class="q-opts">${opts}</div>
+        <div class="q-feedback" id="fb-${i}"></div>`;
+      quizEl.appendChild(card);
+    });
+
+    quizEl.querySelectorAll('.q-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const qi = +opt.dataset.q, oi = +opt.dataset.o;
+        if (answeredSet.has(qi)) return;
+        answeredSet.add(qi);
+        const item = QUIZ[qi];
+        const card = opt.closest('.q-card');
+        const allOpts = card.querySelectorAll('.q-opt');
+        allOpts.forEach(o => o.classList.add('locked'));
+        const fb = document.getElementById('fb-'+qi);
+        if (oi === item.a){
+          opt.classList.add('correct');
+          score++;
+          fb.className = 'q-feedback show right';
+          fb.textContent = '✓ Benar! ' + item.e;
+        } else {
+          opt.classList.add('wrong');
+          allOpts[item.a].classList.add('correct');
+          fb.className = 'q-feedback show miss';
+          fb.textContent = '✗ Kurang tepat. Jawaban: ' + KEYS[item.a] + '. ' + item.e;
+        }
+        answered++;
+        scoreNow.textContent = score;
+        answeredNow.textContent = answered;
+        if (answered === QUIZ.length) showResult();
+      });
+    });
+  }
+
+  function showResult(){
+    resultScore.textContent = score + '/10';
+    let msg;
+    if (score === 10) msg = "🏆 Sempurna! Lo siap pegang server production.";
+    else if (score >= 8) msg = "🔥 Mantap! Fondasi Linux lo udah solid.";
+    else if (score >= 6) msg = "👍 Lumayan! Ulang modul yang masih ragu, lalu coba lagi.";
+    else msg = "📚 Belum apa-apa — baca ulang dari modul 2, lo pasti bisa.";
+    resultMsg.textContent = msg;
+    result.classList.add('show');
+    result.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  document.getElementById('quizReset').addEventListener('click', buildQuiz);
+  buildQuiz();
+
+});
+</script>
+</body>
+</html>

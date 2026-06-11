@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id" suppressHydrationWarning>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="AWS Core Services untuk DevOps / Cloud Engineer — interactive learning dashboard." />
+<title>AWS Core Services · Cloud Engineer Console</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS — long-read AWS console
+     AWS orange and Squid Ink are kept as identity anchors, but tuned
+     for reading comfort. Bright brand orange is decorative; darker
+     orange is used for small text to preserve contrast.
+     ============================================================ */
+  :root{
+    --aws-orange:#ff9900;
+    --squid-ink: #232f3e;
+
+    --bg:        #f4f7fb;
+    --bg-soft:   #edf3f8;
+    --surface:   #ffffff;
+    --surface-2: #f6f8fb;
+    --raised:    #e6edf5;
+    --border:    #ccd8e6;
+    --border-br: #8fa3ba;
+
+    --text:      #18212f;
+    --text-dim:  #39485d;
+    --text-faint:#596878;
+
+    --orange:    #a15c00;
+    --orange-2:  #7a4700;
+    --orange-dim:#d79a3b;
+    --orange-glow: rgba(255,153,0,.14);
+
+    --cyan:      #2f6f8f;
+    --cyan-dim:  rgba(47,111,143,.10);
+    --green:     #1f6b3e;
+    --green-dim: rgba(31,107,62,.10);
+    --red:       #a43d2c;
+    --red-dim:   rgba(164,61,44,.10);
+
+    --terminal-bg:#111827;
+    --terminal-bar:#172033;
+    --terminal-raised:#223049;
+    --terminal-border:#33435c;
+    --terminal-text:#e6edf7;
+    --terminal-dim:#b8c7d9;
+    --terminal-orange:#ffb84d;
+    --terminal-green:#8fd7a3;
+    --terminal-red:#f28b74;
+    --terminal-cyan:#93c5d8;
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    --radius: 14px;
+    --radius-sm: 9px;
+    --maxw: 900px;
+    --sidebar: 290px;
+    --ease: cubic-bezier(.4,0,.2,1);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:15.5px;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+
+  /* subtle AWS-console sheet texture; low contrast for long reading */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(620px 420px at 12% -5%, rgba(255,153,0,.07), transparent 62%),
+      radial-gradient(680px 460px at 100% 0%, rgba(35,47,62,.06), transparent 62%);
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.16;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size:54px 54px;
+    mask-image:radial-gradient(ellipse 90% 55% at 50% 0%, #000 5%, transparent 72%);
+  }
+
+  ::selection{ background:var(--orange-2); color:#fff7e8; }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:var(--border-br); border-radius:20px; border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#748ca7; }
+
+  /* ---- PROGRESS BAR ---- */
+  #progress{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg, var(--orange-dim), var(--orange));
+    box-shadow:0 0 14px var(--orange-glow); z-index:120; transition:width .12s linear;
+  }
+
+  /* ============ LAYOUT ============ */
+  .app{ display:flex; position:relative; z-index:1; }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar{
+    width:var(--sidebar); position:fixed; top:0; left:0; bottom:0;
+    background:linear-gradient(180deg, var(--bg-soft), var(--bg));
+    border-right:1px solid var(--border);
+    padding:24px 16px 24px 24px; display:flex; flex-direction:column; z-index:90;
+    transition:transform .35s var(--ease);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+  .brand .mark{
+    width:40px; height:40px; border-radius:11px; flex-shrink:0;
+    background:linear-gradient(135deg, var(--squid-ink), #31455f);
+    border:1px solid var(--border-br); display:grid; place-items:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .brand .mark svg{ width:22px; height:22px; }
+  .brand h1{ font-size:14.5px; font-weight:750; letter-spacing:.2px; line-height:1.2; }
+  .brand p{ font-family:var(--mono); font-size:10px; color:var(--text-faint); letter-spacing:1.6px; text-transform:uppercase; margin-top:1px; }
+
+  .meta-line{ display:flex; align-items:center; gap:7px; margin:16px 2px 14px; font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:.4px; }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .toc{ overflow-y:auto; margin:0 -6px; padding:4px 6px; flex:1; scrollbar-width:thin; }
+  .toc a{
+    display:flex; align-items:center; gap:10px; padding:7.5px 10px; margin:1px 0;
+    border-radius:8px; color:var(--text-dim); text-decoration:none; font-size:13px; font-weight:500;
+    transition:all .18s var(--ease); position:relative;
+  }
+  .toc a .num{ font-family:var(--mono); font-size:10px; color:var(--text-faint); min-width:20px; transition:color .18s; }
+  .toc a:hover{ background:var(--surface); color:var(--text); }
+  .toc a:hover .num{ color:var(--orange); }
+  .toc a.active{ background:var(--surface-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border-br); }
+  .toc a.active .num{ color:var(--orange); }
+  .toc a.active::before{ content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%); width:3px; height:17px; border-radius:3px; background:var(--orange); box-shadow:0 0 10px var(--orange); }
+  .sidebar-foot{ margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-family:var(--mono); font-size:9.5px; color:var(--text-faint); letter-spacing:.4px; line-height:1.8; }
+
+  /* ---- MAIN ---- */
+  .main{ margin-left:var(--sidebar); flex:1; min-width:0; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 32px 140px; }
+
+  /* ---- HERO ---- */
+  .hero{ padding:84px 0 48px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px;
+    letter-spacing:2px; text-transform:uppercase; color:var(--orange); padding:6px 13px;
+    border:1px solid var(--border-br); border-radius:30px; background:var(--orange-glow); margin-bottom:24px;
+  }
+  .hero h2{ font-size:clamp(33px, 5.6vw, 54px); line-height:1.05; font-weight:800; letter-spacing:-1.3px; margin-bottom:18px; }
+  .hero h2 .grad{ color:var(--orange-2); background:none; -webkit-background-clip:initial; background-clip:initial; -webkit-text-fill-color:currentColor; }
+  .hero p.lead{ font-size:17px; color:var(--text-dim); max-width:640px; line-height:1.65; }
+  .hero-stats{ display:flex; flex-wrap:wrap; gap:12px; margin-top:32px; }
+  .stat{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px 17px; min-width:112px; }
+  .stat .v{ font-family:var(--mono); font-size:21px; font-weight:700; color:var(--orange); }
+  .stat .l{ font-size:11px; color:var(--text-faint); letter-spacing:.5px; text-transform:uppercase; margin-top:2px; }
+
+  /* ---- SECTION / MODULE ---- */
+  section{ scroll-margin-top:28px; margin-bottom:28px; }
+  .module{
+    background:linear-gradient(180deg, var(--surface), var(--bg-soft));
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:32px 32px 28px; position:relative; overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 18px 44px -30px rgba(24,33,47,.22);
+  }
+  .module::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg, var(--orange), transparent 70%); opacity:.7; }
+  .mod-head{ display:flex; align-items:baseline; gap:13px; margin-bottom:7px; flex-wrap:wrap; }
+  .mod-num{ font-family:var(--mono); font-size:13px; color:var(--orange); font-weight:700; letter-spacing:1px; }
+  .mod-head h3{ font-size:24px; font-weight:750; letter-spacing:-.5px; }
+  .badge{ font-family:var(--mono); font-size:9.5px; letter-spacing:1px; text-transform:uppercase; padding:3px 9px; border-radius:20px; border:1px solid var(--border-br); color:var(--cyan); background:var(--cyan-dim); }
+  .badge.verified{ color:var(--green); background:var(--green-dim); border-color:rgba(31,107,62,.24); }
+  .mod-sub{ color:var(--text-dim); font-size:15px; margin-bottom:22px; max-width:660px; }
+
+  .module h4{ font-size:12.5px; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.2px; color:var(--text-faint); margin:24px 0 11px; display:flex; align-items:center; gap:9px; }
+  .module h4::before{ content:""; width:14px; height:1.5px; background:var(--orange); display:inline-block; }
+  .module p{ color:var(--text-dim); margin-bottom:11px; }
+  .module strong{ color:var(--text); font-weight:650; }
+  code.inline{ font-family:var(--mono); font-size:.85em; background:var(--raised); border:1px solid var(--border); padding:1.5px 6px; border-radius:6px; color:var(--orange-2); }
+
+  /* ---- COMMAND BLOCK ---- */
+  .cmd{ position:relative; background:var(--terminal-bg); border:1px solid var(--terminal-border); border-radius:10px; margin:10px 0 14px; overflow:hidden; }
+  .cmd-bar{ display:flex; align-items:center; gap:7px; padding:9px 13px; background:var(--terminal-bar); border-bottom:1px solid var(--terminal-border); }
+  .cmd-bar .tl{ display:flex; gap:6px; }
+  .cmd-bar .tl i{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .tl i:nth-child(1){ background:var(--terminal-red); } .tl i:nth-child(2){ background:var(--terminal-orange); } .tl i:nth-child(3){ background:var(--terminal-green); }
+  .cmd-bar .ttl{ font-family:var(--mono); font-size:11px; color:var(--terminal-dim); margin-left:6px; letter-spacing:.5px; }
+  .copy-btn{ margin-left:auto; font-family:var(--mono); font-size:11px; background:var(--terminal-raised); color:var(--terminal-dim); border:1px solid var(--terminal-border); padding:4px 11px; border-radius:6px; cursor:pointer; transition:all .18s; display:flex; align-items:center; gap:6px; }
+  .copy-btn:hover{ color:var(--terminal-text); border-color:#4a5d7a; background:#293957; }
+  .copy-btn.done{ color:var(--terminal-green); border-color:rgba(143,215,163,.45); }
+  .cmd pre{ font-family:var(--mono); font-size:13.5px; line-height:1.75; padding:15px 16px; overflow-x:auto; color:var(--terminal-text); }
+  .cmd pre .pr{ color:var(--terminal-orange); user-select:none; }
+  .cmd pre .cm{ color:var(--terminal-dim); }
+  .cmd pre .fl{ color:var(--terminal-cyan); }
+  .cmd pre .st{ color:var(--terminal-green); }
+
+  /* ---- CALLOUTS ---- */
+  .callout{ border-radius:10px; padding:14px 16px 14px 46px; margin:13px 0; border:1px solid var(--border); font-size:14.5px; position:relative; }
+  .callout .ic{ position:absolute; left:15px; top:14px; font-size:16px; }
+  .callout .tag{ font-family:var(--mono); font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-faint); display:block; margin-bottom:3px; }
+  .callout b{ color:var(--text); }
+  .callout.case{ background:linear-gradient(180deg, var(--cyan-dim), transparent); border-color:rgba(47,111,143,.24); }
+  .callout.case .ic{ filter:drop-shadow(0 0 8px rgba(47,111,143,.25)); }
+  .callout.mistake{ background:var(--red-dim); border-color:rgba(164,61,44,.28); }
+  .callout.mindset{ background:linear-gradient(180deg, var(--orange-glow), transparent); border-color:rgba(255,153,0,.3); }
+  .callout.practice{ background:linear-gradient(180deg, var(--green-dim), transparent); border-color:rgba(31,107,62,.24); }
+  .callout.warn{ background:var(--orange-glow); border-color:rgba(255,153,0,.28); }
+
+  /* card row */
+  .card-row{ display:grid; grid-template-columns:1fr 1fr; gap:13px; margin:13px 0; }
+  @media (max-width:620px){ .card-row{ grid-template-columns:1fr; } }
+
+  /* ---- ACCORDION ---- */
+  .acc{ border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:6px 0; background:var(--surface); }
+  .acc-h{ display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; user-select:none; transition:background .18s; }
+  .acc-h:hover{ background:var(--surface-2); }
+  .acc-h code{ font-family:var(--mono); font-size:13px; color:var(--orange-2); font-weight:600; white-space:nowrap; }
+  .acc-h .desc{ color:var(--text-dim); font-size:13.5px; flex:1; }
+  .acc-h .chev{ color:var(--text-faint); transition:transform .25s var(--ease); font-size:12px; }
+  .acc.open .chev{ transform:rotate(90deg); color:var(--orange); }
+  .acc-body{ max-height:0; overflow:hidden; transition:max-height .3s var(--ease); }
+  .acc-body-inner{ padding:13px 16px 15px; color:var(--text-dim); font-size:14px; border-top:1px solid var(--border); }
+  .acc-body-inner code{ font-family:var(--mono); background:var(--raised); padding:1px 6px; border-radius:5px; color:var(--orange-2); font-size:12.5px; }
+
+  /* ---- ANALOGY TABLE ---- */
+  .analogy{ display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); border-radius:11px; overflow:hidden; margin:8px 0 4px; }
+  .analogy .row{ display:contents; }
+  .analogy .c{ padding:11px 15px; border-bottom:1px solid var(--border); font-size:14px; }
+  .analogy .c.svc{ font-family:var(--mono); color:var(--orange-2); font-weight:600; background:var(--bg-soft); }
+  .analogy .c.an{ color:var(--text-dim); }
+  .analogy .row:last-child .c{ border-bottom:none; }
+  .analogy .head{ font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); background:var(--surface-2); }
+
+  /* ---- ARCHITECTURE DIAGRAM ---- */
+  .arch{ background:var(--terminal-bg); border:1px solid var(--terminal-border); border-radius:12px; padding:22px 18px; margin:10px 0 4px; }
+  .arch-flow{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; justify-content:center; }
+  .node{ flex:1; min-width:104px; background:var(--terminal-bar); border:1px solid var(--terminal-border); border-radius:10px; padding:13px 10px; text-align:center; position:relative; color:var(--terminal-text); }
+  .node .nl{ font-family:var(--mono); font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:var(--terminal-dim); }
+  .node .nn{ font-weight:700; font-size:13.5px; margin-top:3px; }
+  .node.net{ border-color:rgba(147,197,216,.45); } .node.net .nn{ color:var(--terminal-cyan); }
+  .node.comp{ border-color:rgba(255,184,77,.45); } .node.comp .nn{ color:var(--terminal-orange); }
+  .node.data{ border-color:rgba(143,215,163,.45); } .node.data .nn{ color:var(--terminal-green); }
+  .arrow{ display:flex; align-items:center; justify-content:center; color:var(--terminal-dim); font-family:var(--mono); padding:0 6px; font-size:18px; }
+  .vpc-box{ border:1px dashed var(--border-br); border-radius:11px; padding:14px 12px 12px; margin-top:14px; position:relative; }
+  .vpc-box>.lbl{ position:absolute; top:-10px; left:14px; background:var(--terminal-bg); padding:0 8px; font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--terminal-cyan); text-transform:uppercase; }
+  .subnet-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:560px){ .subnet-grid{ grid-template-columns:1fr; } }
+  .subnet{ border:1px solid var(--terminal-border); border-radius:9px; padding:10px; background:#141f32; }
+  .subnet>.lbl{ font-family:var(--mono); font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--terminal-dim); margin-bottom:8px; display:block; }
+  .subnet.pub>.lbl{ color:var(--terminal-cyan); } .subnet.priv>.lbl{ color:var(--terminal-green); }
+  .arch-side{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .arch-side .node{ flex:1; }
+  .arch-legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--terminal-dim); font-family:var(--mono); }
+  .arch-legend span{ display:flex; align-items:center; gap:6px; }
+  .lg-dot{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+
+  /* ---- TERMINAL SIMULATOR ---- */
+  .term{ background:var(--terminal-bg); border:1px solid var(--terminal-border); border-radius:12px; overflow:hidden; box-shadow:0 24px 60px -32px rgba(24,33,47,.55); margin:14px 0; }
+  .term-bar{ display:flex; align-items:center; gap:7px; padding:11px 14px; background:var(--terminal-bar); border-bottom:1px solid var(--terminal-border); }
+  .term-bar .ttl{ font-family:var(--mono); font-size:11px; color:var(--terminal-dim); margin-left:8px; }
+  .term-bar .hint{ margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--terminal-dim); }
+  .term-body{ font-family:var(--mono); font-size:13px; line-height:1.65; padding:14px 16px; height:308px; overflow-y:auto; color:var(--terminal-text); }
+  .term-body .out{ white-space:pre-wrap; color:var(--terminal-dim); }
+  .term-body .ok{ color:var(--terminal-green); } .term-body .warn{ color:var(--terminal-orange); } .term-body .err{ color:var(--terminal-red); } .term-body .muted{ color:var(--terminal-dim); } .term-body .key{ color:var(--terminal-cyan); }
+  .term-line{ display:flex; gap:8px; }
+  .term-line .ps{ color:var(--terminal-orange); white-space:nowrap; }
+  .term-input-row{ display:flex; gap:8px; align-items:center; padding:12px 16px; border-top:1px solid var(--terminal-border); }
+  .term-input-row .ps{ color:var(--terminal-orange); white-space:nowrap; font-family:var(--mono); font-size:13px; }
+  #termInput{ flex:1; background:transparent; border:none; outline:none; color:var(--terminal-text); font-family:var(--mono); font-size:13px; caret-color:var(--terminal-orange); }
+
+  /* ---- FLOWCHART ---- */
+  .flow{ margin:8px 0; }
+  .flow-step{ display:flex; gap:15px; position:relative; }
+  .flow-step:not(:last-child)::before{ content:""; position:absolute; left:17px; top:36px; bottom:-6px; width:2px; background:linear-gradient(180deg, var(--border-br), var(--border)); }
+  .flow-node{ width:36px; height:36px; flex-shrink:0; border-radius:50%; background:var(--surface-2); border:1px solid var(--border-br); display:grid; place-content:center; font-family:var(--mono); font-weight:700; font-size:14px; color:var(--orange); z-index:1; transition:all .25s; }
+  .flow-step:hover .flow-node{ background:var(--orange-glow); border-color:var(--orange); box-shadow:0 0 16px -4px var(--orange); }
+  .flow-content{ padding-bottom:18px; flex:1; }
+  .flow-content .q{ font-weight:650; color:var(--text); font-size:15px; margin-bottom:4px; }
+  .flow-content .cmd-mini{ font-family:var(--mono); font-size:12.5px; color:var(--terminal-orange); background:var(--terminal-bg); border:1px solid var(--terminal-border); border-radius:7px; padding:6px 11px; display:inline-block; margin-top:3px; }
+  .flow-content .ans{ color:var(--text-dim); font-size:13.5px; margin-top:5px; }
+
+  /* ---- CHEATSHEET ---- */
+  .sheet-controls{ margin-bottom:14px; }
+  #sheetSearch{ width:100%; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:10px 14px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; transition:border .18s; }
+  #sheetSearch:focus{ border-color:var(--orange-dim); box-shadow:0 0 0 3px var(--orange-glow); }
+  .sheet-wrap{ border:1px solid var(--border); border-radius:11px; overflow:hidden; overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:560px; }
+  thead th{ text-align:left; padding:11px 13px; background:var(--surface-2); color:var(--text-faint); font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase; border-bottom:1px solid var(--border); }
+  tbody td{ padding:11px 13px; border-bottom:1px solid var(--border); color:var(--text-dim); vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:var(--surface); }
+  tbody td .svc{ font-family:var(--mono); color:var(--orange-2); font-weight:600; white-space:nowrap; }
+
+  /* ---- QUIZ ---- */
+  .quiz-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .quiz-score{ font-family:var(--mono); font-size:13px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); padding:8px 15px; border-radius:30px; }
+  .quiz-score b{ color:var(--orange); font-size:16px; }
+  .q-card{ background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:17px 19px; margin-bottom:12px; }
+  .q-card .q-num{ font-family:var(--mono); font-size:11px; color:var(--orange); letter-spacing:1px; }
+  .q-card .q-text{ font-weight:600; font-size:15px; margin:5px 0 13px; color:var(--text); }
+  .q-opts{ display:grid; gap:8px; }
+  .q-opt{ display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:8px; cursor:pointer; background:var(--bg-soft); border:1px solid var(--border); transition:all .15s; font-size:14px; color:var(--text-dim); }
+  .q-opt:hover{ border-color:var(--border-br); color:var(--text); }
+  .q-opt .ky{ font-family:var(--mono); font-size:12px; width:24px; height:24px; border-radius:6px; background:var(--raised); display:grid; place-content:center; color:var(--text-faint); flex-shrink:0; border:1px solid var(--border); }
+  .q-opt.correct{ background:var(--green-dim); border-color:rgba(31,107,62,.32); color:var(--text); }
+  .q-opt.correct .ky{ background:var(--green); color:#f2fff5; }
+  .q-opt.wrong{ background:var(--red-dim); border-color:rgba(164,61,44,.34); color:var(--text); }
+  .q-opt.wrong .ky{ background:var(--red); color:#fff6f2; }
+  .q-opt.locked{ cursor:default; pointer-events:none; opacity:.9; }
+  .q-feedback{ font-family:var(--mono); font-size:12.5px; margin-top:11px; padding-top:11px; border-top:1px solid var(--border); display:none; }
+  .q-feedback.show{ display:block; } .q-feedback.right{ color:var(--green); } .q-feedback.miss{ color:var(--orange-2); }
+  .quiz-reset{ font-family:var(--mono); font-size:12.5px; background:var(--raised); color:var(--text-dim); border:1px solid var(--border); padding:9px 18px; border-radius:8px; cursor:pointer; margin-top:6px; transition:all .18s; }
+  .quiz-reset:hover{ color:var(--text); border-color:var(--border-br); }
+  .quiz-result{ margin-top:16px; padding:20px; border-radius:11px; text-align:center; display:none; background:linear-gradient(180deg, var(--orange-glow), transparent); border:1px solid rgba(255,153,0,.3); }
+  .quiz-result.show{ display:block; animation:fadeUp .5s var(--ease); }
+  .quiz-result .big{ font-family:var(--mono); font-size:38px; font-weight:800; color:var(--orange); }
+  .quiz-result .msg{ color:var(--text-dim); margin-top:4px; }
+
+  /* ---- MCP NOTES ---- */
+  .mcp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-top:6px; }
+  @media (max-width:620px){ .mcp-grid{ grid-template-columns:1fr; } }
+  .mcp-item{ background:var(--bg-soft); border:1px solid var(--border); border-left:2px solid var(--green); border-radius:8px; padding:11px 14px; font-size:13.5px; color:var(--text-dim); }
+  .mcp-item b{ color:var(--text); display:block; margin-bottom:2px; font-size:13px; }
+  .ref-list{ columns:2; column-gap:24px; margin-top:6px; }
+  @media (max-width:620px){ .ref-list{ columns:1; } }
+  .ref-list li{ list-style:none; padding:5px 0 5px 16px; position:relative; font-size:13px; color:var(--text-dim); break-inside:avoid; }
+  .ref-list li::before{ content:"§"; position:absolute; left:0; color:var(--orange); font-family:var(--mono); }
+
+  /* ---- FOOTER ---- */
+  .foot{ text-align:center; padding:36px 0 0; color:var(--text-faint); font-family:var(--mono); font-size:12px; letter-spacing:.4px; border-top:1px solid var(--border); margin-top:46px; }
+  .foot b{ color:var(--orange); }
+
+  /* ---- MOBILE NAV ---- */
+  .topbar{ display:none; position:fixed; top:0; left:0; right:0; height:58px; z-index:100; background:rgba(255,255,255,.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--border); align-items:center; padding:0 16px; gap:12px; }
+  .topbar .mb-brand{ font-weight:700; font-size:14px; }
+  .topbar .mb-brand span{ color:var(--orange); font-family:var(--mono); }
+  .burger{ margin-left:auto; width:40px; height:40px; border-radius:9px; background:var(--surface); border:1px solid var(--border); display:grid; place-content:center; gap:4px; cursor:pointer; }
+  .burger i{ width:18px; height:2px; background:var(--text); display:block; border-radius:2px; }
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(24,33,47,.32); z-index:85; }
+  .overlay.show{ display:block; }
+
+  /* ---- REVEAL ---- */
+  .reveal{ opacity:0; transform:translateY(26px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+  .reveal.in{ opacity:1; transform:none; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } .reveal{ opacity:1; transform:none; } }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width:1040px){
+    .sidebar{ transform:translateX(-100%); width:300px; box-shadow:30px 0 60px -20px rgba(24,33,47,.28); }
+    .sidebar.open{ transform:none; }
+    .main{ margin-left:0; }
+    .topbar{ display:flex; }
+    .wrap{ padding:0 18px 110px; }
+    .hero{ padding:82px 0 38px; }
+    .module{ padding:24px 18px 22px; }
+  }
+  @media (max-width:560px){
+    body{ font-size:15px; }
+    .mod-head h3{ font-size:20px; }
+    .analogy{ grid-template-columns:1fr; }
+    .analogy .c.svc{ border-bottom:none; }
+    .arch-flow{ flex-direction:column; } .arrow{ transform:rotate(90deg); padding:4px 0; }
+    .hero-stats .stat{ flex:1; min-width:calc(50% - 6px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div class="topbar">
+  <div class="mb-brand"><span>aws://</span>core-services</div>
+  <div class="burger" id="burger" aria-label="Menu"><i></i><i></i><i></i></div>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 14.5c3 2 5 2.6 8 2.6s5-.6 8-2.6" stroke="#ff9900" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M6.5 10.5c0-3 2.2-5 5.5-5s5.5 2 5.5 5" stroke="#38c6e0" stroke-width="1.7" stroke-linecap="round"/>
+          <circle cx="12" cy="13" r="1.6" fill="#54d98a"/>
+        </svg>
+      </div>
+      <div>
+        <h1>AWS Core Services</h1>
+        <p>Cloud Engineer Console</p>
+      </div>
+    </div>
+    <div class="meta-line"><span class="dot"></span> 16 SERVICE · MCP-VERIFIED · BAHASA INDONESIA</div>
+
+    <nav class="toc" id="toc">
+      <a href="#s1"><span class="num">00</span> AWS Mental Model</a>
+      <a href="#s2"><span class="num">01</span> IAM</a>
+      <a href="#s3"><span class="num">02</span> VPC</a>
+      <a href="#s4"><span class="num">03</span> Security Group &amp; NACL</a>
+      <a href="#s5"><span class="num">04</span> EC2</a>
+      <a href="#s6"><span class="num">05</span> EBS &amp; AMI</a>
+      <a href="#s7"><span class="num">06</span> Elastic Load Balancing</a>
+      <a href="#s8"><span class="num">07</span> Auto Scaling Group</a>
+      <a href="#s9"><span class="num">08</span> S3</a>
+      <a href="#s10"><span class="num">09</span> RDS</a>
+      <a href="#s11"><span class="num">10</span> Lambda</a>
+      <a href="#s12"><span class="num">11</span> CloudWatch</a>
+      <a href="#s13"><span class="num">12</span> Route 53 &amp; DNS</a>
+      <a href="#s14"><span class="num">13</span> CloudFront</a>
+      <a href="#s15"><span class="num">14</span> AWS CLI</a>
+      <a href="#s16"><span class="num">15</span> Billing &amp; Cost</a>
+      <a href="#s17"><span class="num">16</span> Mini Project E2E</a>
+      <a href="#s18"><span class="num">17</span> Troubleshooting Flow</a>
+      <a href="#s19"><span class="num">18</span> Cheatsheet</a>
+      <a href="#s20"><span class="num">19</span> Quiz Interaktif</a>
+      <a href="#s21"><span class="num">20</span> MCP Notes &amp; Refs</a>
+    </nav>
+
+    <div class="sidebar-foot">VALIDATED VIA AWS MCP<br/>focus: <b style="color:var(--orange)">DevOps / Cloud Eng</b></div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="wrap">
+
+      <!-- HERO -->
+      <header class="hero reveal">
+        <div class="kicker"><span class="dot"></span> 3-MONTH DEVOPS TRACK · CORE CLOUD</div>
+        <h2>AWS Core Services untuk<br/><span class="grad">DevOps &amp; Cloud Engineer</span></h2>
+        <p class="lead">Lo udah pegang Git, Docker, CI/CD. Sekarang waktunya paham <strong style="color:var(--text)">"tanah cloud"</strong> tempat semua itu jalan. Materi ini ngebahas 16 service inti AWS — bukan teori, tapi <em>kapan dipakai di kerjaan nyata</em>. Tiap fakta teknis di sini <strong style="color:var(--green)">divalidasi dari AWS Documentation via MCP</strong>.</p>
+        <div class="hero-stats">
+          <div class="stat"><div class="v">16</div><div class="l">Service</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Mini Project</div></div>
+          <div class="stat"><div class="v">15</div><div class="l">Soal Quiz</div></div>
+          <div class="stat"><div class="v">100%</div><div class="l">MCP Verified</div></div>
+        </div>
+      </header>
+
+      <!-- =================== 1 · MENTAL MODEL =================== -->
+      <section id="s1" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">00</span><h3>AWS Mental Model</h3><span class="badge">START HERE</span></div>
+          <p class="mod-sub">Sebelum hafal nama service, bangun "peta mental" dulu. Anggap AWS itu sebuah kantor — tiap service punya peran seperti bagian di kantor.</p>
+
+          <h4>Analogi: AWS itu Sebuah Kantor</h4>
+          <div class="analogy">
+            <div class="row"><div class="c head">Komponen AWS</div><div class="c head">Analoginya</div></div>
+            <div class="row"><div class="c svc">AWS Account</div><div class="c an">Kantor utama lo</div></div>
+            <div class="row"><div class="c svc">IAM</div><div class="c an">Kartu akses / izin tiap pegawai</div></div>
+            <div class="row"><div class="c svc">VPC</div><div class="c an">Gedung kantor (jaringan privat lo)</div></div>
+            <div class="row"><div class="c svc">Subnet</div><div class="c an">Ruangan / lantai di dalam gedung</div></div>
+            <div class="row"><div class="c svc">EC2</div><div class="c an">Server / mesin kerja</div></div>
+            <div class="row"><div class="c svc">Security Group</div><div class="c an">Satpam di depan pintu server</div></div>
+            <div class="row"><div class="c svc">S3</div><div class="c an">Gudang file (object storage)</div></div>
+            <div class="row"><div class="c svc">RDS</div><div class="c an">Database yang dikelola otomatis</div></div>
+            <div class="row"><div class="c svc">CloudWatch</div><div class="c an">CCTV + logbook (monitoring)</div></div>
+            <div class="row"><div class="c svc">Route 53</div><div class="c an">Buku alamat (DNS)</div></div>
+            <div class="row"><div class="c svc">ELB</div><div class="c an">Resepsionis pembagi tamu/traffic</div></div>
+            <div class="row"><div class="c svc">Auto Scaling</div><div class="c an">Nambah/ngurangin pegawai otomatis</div></div>
+          </div>
+
+          <h4>Diagram Arsitektur Sederhana</h4>
+          <div class="arch">
+            <div class="arch-flow">
+              <div class="node"><div class="nl">Client</div><div class="nn">User</div></div>
+              <div class="arrow">→</div>
+              <div class="node net"><div class="nl">DNS</div><div class="nn">Route 53</div></div>
+              <div class="arrow">→</div>
+              <div class="node net"><div class="nl">Traffic</div><div class="nn">Load Balancer</div></div>
+            </div>
+            <div class="vpc-box">
+              <span class="lbl">VPC — jaringan privat</span>
+              <div class="subnet-grid">
+                <div class="subnet pub"><span class="lbl">Public Subnet</span>
+                  <div class="node comp"><div class="nl">Compute</div><div class="nn">EC2 (web)</div></div>
+                </div>
+                <div class="subnet priv"><span class="lbl">Private Subnet</span>
+                  <div class="node data"><div class="nl">Database</div><div class="nn">RDS</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="arch-side">
+              <div class="node data"><div class="nl">Object Storage</div><div class="nn">S3</div></div>
+              <div class="node comp"><div class="nl">Monitoring</div><div class="nn">CloudWatch</div></div>
+            </div>
+            <div class="arch-legend">
+              <span><i class="lg-dot" style="background:var(--cyan)"></i> Network</span>
+              <span><i class="lg-dot" style="background:var(--orange)"></i> Compute</span>
+              <span><i class="lg-dot" style="background:var(--green)"></i> Data / Storage</span>
+            </div>
+          </div>
+          <p style="margin-top:14px">Alurnya: <strong>User</strong> ketik domain → <strong>Route 53</strong> arahkan ke <strong>Load Balancer</strong> → LB bagi traffic ke <strong>EC2</strong> di public subnet → EC2 ambil data dari <strong>RDS</strong> di private subnet. <strong>S3</strong> nyimpan file statis, <strong>CloudWatch</strong> ngawasin semuanya. Inget gambar ini — semua section selanjutnya cuma "memperbesar" satu kotak di sini.</p>
+
+          <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Jangan belajar service satu-satu secara terpisah. <b>Selalu tanya: "kotak ini posisinya di mana dalam diagram?"</b> Paham relasi antar service jauh lebih berharga daripada hafal fitur.</div>
+        </div>
+      </section>
+
+      <!-- =================== 2 · IAM =================== -->
+      <section id="s2" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">01</span><h3>IAM</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Identity &amp; Access Management — siapa boleh ngapain di AWS lo. Ini pondasi keamanan; salah di sini = pintu terbuka buat penyerang.</p>
+
+          <h4>Konsep Inti</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Root user</code><span class="desc">Pemilik akun, kekuasaan penuh tanpa batas.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Identity default saat akun dibuat. Sesuai AWS best practice: <b>jarang dipakai</b>, amankan dengan MFA &amp; password kuat, dan <b>jangan bikin access key untuk root</b>. Buat daily work, pakai identity lain.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>IAM user</code><span class="desc">Identity per orang/aplikasi.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Untuk login console / akses programatik. Tapi AWS sekarang merekomendasikan <b>temporary credentials lewat role</b> ketimbang long-term access key kalau bisa.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>IAM group</code><span class="desc">Kumpulan user dengan izin sama.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Daripada attach policy ke tiap user satu-satu, masukkan user ke group (mis. <code>developers</code>), lalu attach policy ke group. Lebih rapi &amp; scalable.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>IAM role</code><span class="desc">Identity sementara untuk service/akses.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tidak punya password/key permanen — memberikan <b>temporary credentials</b>. Dipakai untuk service-to-service: mis. EC2 pakai role buat akses S3 tanpa nyimpan key. Inilah cara aman.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>IAM policy</code><span class="desc">Dokumen JSON aturan izin (Allow/Deny).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Menentukan <code>Action</code> apa boleh ke <code>Resource</code> mana. Prinsip wajib: <b>least privilege</b> — kasih izin seminimal yang dibutuhkan, bukan <code>"*"</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>MFA</code><span class="desc">Lapisan login kedua (kode dari HP).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Multi-Factor Authentication. Aktifkan terutama di root &amp; user admin. Walau password bocor, penyerang tetap keblok.</div></div></div>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"DevOps butuh akses deploy ke EC2 &amp; S3 — harus pakai root?" → <b>Tidak.</b> Buat IAM user (atau lebih baik, gunakan role/SSO), masukkan ke group, attach policy yang <b>cuma</b> mengizinkan akses EC2 &amp; S3 yang relevan, lalu aktifkan MFA. Root disimpan, jangan dipakai harian.</div>
+            <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Pakai root buat kerja harian · share access key antar orang · policy terlalu <code>wildcard</code> (<code>Action:"*"</code>, <code>Resource:"*"</code>). Tiga ini temuan audit keamanan paling sering.</div>
+          </div>
+          <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Mulai dari izin <b>kosong</b>, tambah pelan-pelan saat dibutuhkan (least privilege). Jauh lebih aman daripada kasih akses penuh lalu "nanti dirapiin" — yang nggak pernah kejadian.</div>
+        </div>
+      </section>
+
+      <!-- =================== 3 · VPC =================== -->
+      <section id="s3" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">02</span><h3>VPC</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Virtual Private Cloud — jaringan privat lo di AWS. Semua EC2, RDS, dll "tinggal" di dalam VPC. Ini "gedung" di mental model tadi.</p>
+
+          <h4>Komponen Penting</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Region &amp; AZ</code><span class="desc">Lokasi fisik data center.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Region</b> = wilayah geografis (mis. <code>ap-southeast-1</code> Singapore). <b>Availability Zone (AZ)</b> = data center terpisah dalam region. Sebar resource ke beberapa AZ = tahan kalau satu AZ down.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>CIDR</code><span class="desc">Rentang IP privat VPC.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Mis. <code>10.0.0.0/16</code> = ~65k IP. Subnet ngambil potongan dari sini, mis. <code>10.0.1.0/24</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Public subnet</code><span class="desc">Bisa terhubung ke internet.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Subnet yang route table-nya mengarah ke <b>Internet Gateway</b>. Cocok untuk web server / Load Balancer yang harus diakses publik.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Private subnet</code><span class="desc">Tertutup dari internet langsung.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tidak punya route langsung ke Internet Gateway. Cocok untuk database (RDS) &amp; backend yang tak boleh diakses publik.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Route Table</code><span class="desc">Aturan "ke sana lewat mana".</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Menentukan tujuan traffic. Public subnet punya route <code>0.0.0.0/0 → Internet Gateway</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Internet Gateway (IGW)</code><span class="desc">Pintu gerbang ke internet.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Komponen yang memungkinkan VPC berkomunikasi dengan internet. Tanpa IGW + route, tidak ada akses publik.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>NAT Gateway</code><span class="desc">Private subnet keluar ke internet (1 arah).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Biar EC2 di private subnet bisa <b>download update</b> ke internet, tapi tetap tak bisa diakses dari luar. <b>Hati-hati:</b> NAT Gateway kena biaya per jam + per GB — bisa mahal untuk lab pemula.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Kenapa EC2 di private subnet nggak bisa diakses langsung dari internet?" → Karena route table private subnet <b>tidak</b> mengarah ke Internet Gateway, dan instance-nya tak punya public IP. Itu memang <b>disengaja</b> demi keamanan — backend &amp; database harus tersembunyi.</div>
+          <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Pola standar production: <b>Load Balancer di public subnet, aplikasi &amp; database di private subnet</b>. Yang menghadap internet sesedikit mungkin.</div>
+        </div>
+      </section>
+
+      <!-- =================== 4 · SG & NACL =================== -->
+      <section id="s4" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">03</span><h3>Security Group &amp; NACL</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Dua lapis firewall di VPC. Paham bedanya = bisa debug "kenapa nggak bisa connect" dengan cepat.</p>
+
+          <div class="card-row">
+            <div class="callout case" style="padding-left:16px"><span class="tag">Security Group · level INSTANCE</span><b>Stateful.</b> Menempel di EC2/resource. Cuma punya <b>allow rule</b> (implicit deny sisanya). Karena stateful, kalau inbound diizinkan, <b>traffic balasannya otomatis diizinkan</b> — nggak perlu atur outbound-nya.</div>
+            <div class="callout case" style="padding-left:16px"><span class="tag">NACL · level SUBNET</span><b>Stateless.</b> Menempel di subnet. Punya <b>allow &amp; deny rule</b> (bisa blok IP spesifik). Karena stateless, lo harus <b>atur inbound DAN outbound secara eksplisit</b> (termasuk port balasan/ephemeral).</div>
+          </div>
+
+          <h4>Port yang Wajib Hafal</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>22</code><span class="desc">SSH — remote login ke server.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Batasi <b>hanya ke IP lo</b> (mis. <code>1.2.3.4/32</code>), jangan ke seluruh dunia.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>80</code><span class="desc">HTTP — web traffic biasa.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Boleh dibuka ke publik (<code>0.0.0.0/0</code>) kalau memang web server publik.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>443</code><span class="desc">HTTPS — web traffic terenkripsi.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Standar production. Selalu pakai HTTPS untuk traffic publik.</div></div></div>
+          </div>
+
+          <div class="callout mistake"><span class="ic">💀</span><span class="tag">Bahaya · Common Mistake</span>Buka <b>SSH (22) ke <code>0.0.0.0/0</code></b> = seluruh internet bisa nyoba brute-force login ke server lo. Ini salah satu misconfig paling berbahaya &amp; paling sering. Batasi ke IP kantor/rumah lo saja.</div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case · Checklist</span>"Nginx udah running di EC2 tapi web nggak bisa dibuka dari browser — cek apa?" Telusuri dari luar ke dalam:
+            <div style="margin-top:8px;font-family:var(--mono);font-size:12.5px;color:var(--text-dim);line-height:1.9">
+              ① EC2 punya <b style="color:var(--text)">public IP</b>?<br/>
+              ② Instance di <b style="color:var(--text)">public subnet</b>?<br/>
+              ③ Route table → <b style="color:var(--text)">Internet Gateway</b>?<br/>
+              ④ <b style="color:var(--text)">Security Group</b> allow port 80?<br/>
+              ⑤ <b style="color:var(--text)">OS firewall</b> (ufw) di Ubuntu?<br/>
+              ⑥ <b style="color:var(--text)">Nginx</b>-nya beneran running?
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 5 · EC2 =================== -->
+      <section id="s5" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">04</span><h3>EC2</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Elastic Compute Cloud — server virtual lo. Ini "mesin" yang ngejalanin aplikasi. Service yang paling sering disentuh DevOps pemula.</p>
+
+          <h4>Konsep Inti</h4>
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Instance</code><span class="desc">Satu server virtual yang jalan.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Dibuat dari sebuah AMI + instance type. Tiap instance dapat private IP, dan optional public IP.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>AMI</code><span class="desc">Template OS + software awal.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Amazon Machine Image — "cetakan" instance, mis. Ubuntu 22.04. Bisa bikin AMI sendiri dari server yang udah dikonfigurasi.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Instance type</code><span class="desc">Ukuran CPU/RAM, mis. t3.micro.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Menentukan resource &amp; harga. <code>t</code>-family (burstable) cocok untuk beban ringan/lab.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Key pair</code><span class="desc">Kunci SSH (.pem) untuk login.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">AWS simpan public key, lo pegang private key (.pem). Tanpa file ini, nggak bisa SSH masuk.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>User data</code><span class="desc">Script otomatis saat first boot.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Script (bash) yang jalan sekali saat instance pertama nyala — mis. auto-install Nginx. Otomatisasi bootstrap.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Public vs Private IP</code><span class="desc">Alamat dari luar vs dalam.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Public IP</b> bisa berubah saat instance di-stop/start. Butuh IP tetap? Pakai Elastic IP. (Ingat: public IPv4 sekarang berbayar — lihat section Billing.)</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Stop vs Terminate</code><span class="desc">Matikan sementara vs hapus permanen.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Stop</b> = instance dimatikan tapi tidak dihapus; EBS root volume tetap ada (data aman), saat di-start lagi biasanya dapat public IP baru. <b>Terminate</b> = instance <b>dihapus permanen</b>. Data di instance store hilang. (Tervalidasi via AWS Docs.)</div></div></div>
+          </div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">ssh-ke-ec2.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>chmod 400 mykey.pem
+<span class="pr">$ </span>ssh <span class="fl">-i</span> mykey.pem ubuntu@PUBLIC_IP
+<span class="cm"># user default Ubuntu = 'ubuntu'</span></pre>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Deploy web app sederhana di EC2 Ubuntu." → Launch instance (AMI Ubuntu, t3.micro), pasang key pair, buka port 80 di Security Group, SSH masuk, install Nginx, taruh aplikasi. Pakai <b>user data</b> kalau mau otomatis.</div>
+            <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Selalu <b>tag</b> instance (<code>Name</code>, <code>Env</code>, <code>Owner</code>). Tanpa tag, 3 bulan lagi lo bingung "ini server apa, punya siapa, boleh dimatiin nggak?"</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 6 · EBS & AMI =================== -->
+      <section id="s6" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">05</span><h3>EBS &amp; AMI</h3></div>
+          <p class="mod-sub">Storage &amp; template untuk EC2. EBS = "hard disk"-nya server. AMI = "cetakan" untuk bikin server kembar.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>EBS Volume</code><span class="desc">Block storage (disk) yang nempel ke EC2.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Elastic Block Store — disk virtual untuk EC2. <b>Root volume</b> menyimpan OS. Datanya persisten (tetap ada walau instance di-stop). Catatan billing: EBS volume <b>tetap kena biaya</b> walau instance dimatikan.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Snapshot</code><span class="desc">Backup point-in-time dari EBS.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">"Foto" isi volume pada satu waktu, disimpan di S3 (managed). Dipakai untuk backup &amp; restore data disk.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>AMI</code><span class="desc">Template lengkap OS + konfigurasi.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Bikin AMI dari server yang sudah dikonfigurasi → bisa launch server identik berkali-kali. Dasar untuk Auto Scaling &amp; replikasi cepat.</div></div></div>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Sebelum upgrade package besar di server, backup apa dulu?" → Ambil <b>EBS Snapshot</b> dari root volume. Kalau upgrade gagal/rusak, lo bisa restore dari snapshot.</div>
+            <div class="callout mindset"><span class="ic">🧠</span><span class="tag">Snapshot vs AMI</span>Butuh <b>backup data disk</b> → Snapshot. Butuh <b>cetakan server lengkap</b> untuk diluncurkan ulang (mis. buat ASG) → AMI.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 7 · ELB =================== -->
+      <section id="s7" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">06</span><h3>Elastic Load Balancing</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">"Resepsionis" yang membagi traffic ke banyak server sehat. Wajib untuk aplikasi production yang serius.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Load Balancer (ALB)</code><span class="desc">Pembagi traffic layer HTTP/HTTPS.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Application Load Balancer bekerja di layer 7 (HTTP/HTTPS), cocok untuk web app. Menerima request user lalu membagikannya ke target sehat.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Target Group</code><span class="desc">Kumpulan EC2 tujuan traffic.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Grup target (mis. EC2) tempat ALB meneruskan request. ALB hanya mengirim ke target yang lolos health check.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Health Check</code><span class="desc">Cek berkala apakah target sehat.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">ALB rutin "mengetuk" target (protocol/port/path/interval/timeout/threshold bisa diatur). Target harus lolos sejumlah cek berturut-turut untuk dianggap <b>healthy</b>. Penting (tervalidasi): jika <b>semua</b> target unhealthy, ALB "fail open" — meneruskan ke semua target apa adanya.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Listener</code><span class="desc">Port yang didengarkan ALB (80/443).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Aturan: "request masuk di port 443 → teruskan ke target group X". Listener HTTPS butuh sertifikat (mis. dari ACM).</div></div></div>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Traffic user masuk ke ALB lalu diteruskan ke EC2 yang sehat." → User → ALB (listener 443) → Target Group → EC2 yang lolos health check. Kalau satu EC2 mati, ALB otomatis berhenti mengirim ke situ.</div>
+            <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Di production, <b>jangan expose EC2 langsung ke internet</b>. Taruh ALB di depan: lebih aman, bisa SSL termination, health check, dan gampang nambah server di belakangnya.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 8 · ASG =================== -->
+      <section id="s8" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">07</span><h3>Auto Scaling Group</h3></div>
+          <p class="mod-sub">Nambah server saat ramai, ngurangin saat sepi — otomatis. Hemat biaya sekaligus tahan beban.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Launch Template</code><span class="desc">Resep cara bikin instance baru.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Mendefinisikan AMI, instance type, key pair, Security Group, user data. ASG pakai ini untuk meluncurkan instance baru yang seragam.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Min / Desired / Max</code><span class="desc">Batas jumlah instance.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Minimum</b> = jumlah terkecil yang selalu jalan. <b>Desired</b> = target saat ini. <b>Maximum</b> = batas atas. ASG menjaga jumlah instance tetap di antara batas ini.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Scaling Policy</code><span class="desc">Pemicu nambah/ngurangin.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Mis. "kalau rata-rata CPU &gt; 70%, tambah instance". Berbasis metric CloudWatch.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Health Check + ELB</code><span class="desc">Ganti instance sakit otomatis.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">ASG sering dipasang dengan ALB: instance baru otomatis didaftarkan ke Target Group, dan instance yang gagal health check diganti otomatis.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Kalau traffic naik, server bertambah otomatis." → CloudWatch deteksi CPU tinggi → scaling policy nambah instance → instance baru daftar ke Target Group ALB → traffic kebagi. Saat sepi, instance dikurangi lagi. <b>Lo tidur, AWS yang kerja.</b></div>
+        </div>
+      </section>
+
+      <!-- =================== 9 · S3 =================== -->
+      <section id="s9" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">08</span><h3>S3</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Simple Storage Service — "gudang" object storage tanpa batas. Tempat artifact build, backup, file statis, log. Salah satu service paling sering dipakai.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Bucket</code><span class="desc">Wadah utama, nama unik global.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Container untuk object. Nama bucket harus unik di <b>seluruh AWS</b> dan terikat ke satu Region.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Object &amp; Key</code><span class="desc">File + "alamat"-nya di bucket.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Object</b> = file-nya. <b>Key</b> = nama/path lengkap object, mis. <code>builds/app-v1.zip</code>. S3 itu flat — "folder" hanyalah prefix pada key.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Versioning</code><span class="desc">Simpan riwayat tiap perubahan object.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Aktifkan untuk data penting: kalau file ketimpa/terhapus, versi lama masih bisa dipulihkan.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Encryption</code><span class="desc">Enkripsi data at-rest.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">S3 mendukung enkripsi server-side. Aktifkan untuk data sensitif.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Block Public Access</code><span class="desc">Pelindung dari kebocoran publik.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi via AWS Docs: <b>aktif secara default</b> untuk semua bucket baru. Biarkan menyala; kalau butuh akses publik (mis. static website), atur lewat <b>bucket policy</b>, bukan ACL.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Static Website Hosting</code><span class="desc">Sajikan HTML langsung dari S3.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">S3 bisa hosting website statis (HTML/CSS/JS). Sering dikombinasikan dengan CloudFront untuk HTTPS + CDN.</div></div></div>
+          </div>
+
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">s3-basic.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>aws s3 ls                                  <span class="cm"># list semua bucket</span>
+<span class="pr">$ </span>aws s3 cp index.html s3://nama-bucket/       <span class="cm"># upload artifact</span></pre>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Simpan artifact build frontend ke S3." → Pipeline CI/CD build → <code>aws s3 cp dist/ s3://my-artifacts/ --recursive</code> → artifact tersimpan, siap di-deploy/serve.</div>
+            <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Bikin bucket <b>public sembarangan</b> (data bocor) · lupa <b>versioning</b> untuk data penting · salah paham S3 seperti folder biasa — padahal flat object store, bukan filesystem.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 10 · RDS =================== -->
+      <section id="s10" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">09</span><h3>RDS</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Relational Database Service — database (MySQL/PostgreSQL/dll) yang dikelola AWS. Lo nggak ngurus patching, backup, replikasi manual.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Managed DB</code><span class="desc">AWS urus backup, patch, scaling.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lo fokus ke schema &amp; query; AWS urus operasional infrastruktur DB. Hemat waktu besar dibanding install DB manual di EC2.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Engine</code><span class="desc">MySQL, PostgreSQL, dll.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Pilih engine sesuai aplikasi. Contoh paling umum untuk pemula: MySQL atau PostgreSQL.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>DB Instance &amp; Storage</code><span class="desc">Server DB + ukuran disk.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Mirip instance type EC2 tapi untuk DB. Storage bisa diatur &amp; (umumnya) di-autoscale.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Backup</code><span class="desc">Automated backup &amp; snapshot.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">RDS bisa backup otomatis terjadwal + snapshot manual untuk restore point-in-time.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Multi-AZ</code><span class="desc">Replika standby untuk high availability.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi: butuh <b>DB subnet group</b> mencakup ≥2 subnet di Availability Zone berbeda. Kalau AZ utama down, RDS failover ke standby. (Multi-AZ DB <i>cluster</i> = 1 writer + 2 reader di 3 AZ, untuk MySQL/PostgreSQL.)</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Security Group DB</code><span class="desc">Siapa boleh konek ke DB.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Batasi inbound DB (mis. port 3306/5432) <b>hanya dari Security Group EC2 aplikasi</b>, bukan dari internet.</div></div></div>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Web app di EC2 connect ke RDS di private subnet." → RDS ditaruh di <b>private subnet</b> (tak terjangkau internet). Security Group RDS hanya mengizinkan inbound dari Security Group EC2. Aman &amp; rapi.</div>
+            <div class="callout mistake"><span class="ic">⚠️</span><span class="tag">Common Mistake</span>Bikin RDS <b>publicly accessible</b> + Security Group buka ke <code>0.0.0.0/0</code>. Database <b>harus</b> di private subnet, akses dibatasi ketat.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 11 · Lambda =================== -->
+      <section id="s11" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">10</span><h3>Lambda</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Jalankan kode <strong>tanpa</strong> ngurus server. Bayar cuma saat kode jalan. Cocok untuk tugas kecil yang event-driven.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Serverless Function</code><span class="desc">Kode jalan tanpa kelola server.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lo upload fungsi, AWS yang sediakan &amp; skala infrastrukturnya. Nggak ada EC2 yang harus lo patch.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Event-driven</code><span class="desc">Dipicu oleh event (event source).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lambda dijalankan saat ada event — mis. object masuk S3, request API Gateway, atau jadwal terjadwal.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Runtime</code><span class="desc">Bahasa: Python, Node.js, dll.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lingkungan eksekusi kode lo (mis. Python 3.x, Node.js).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Handler</code><span class="desc">Fungsi entry-point yang dipanggil.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi: handler adalah <b>method entry-point</b> yang dipanggil Lambda saat invoke. Menerima <code>event</code> (payload) &amp; <code>context</code> (metadata invocation).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>IAM Role (Execution)</code><span class="desc">Izin Lambda mengakses service lain.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Lambda butuh execution role untuk akses S3, DynamoDB, dll — dan untuk menulis log ke CloudWatch. Terapkan least privilege.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>CloudWatch Logs</code><span class="desc">Tempat output/log Lambda.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Semua <code>print</code>/log Lambda otomatis masuk ke CloudWatch Logs — tempat pertama buat debug fungsi yang error.</div></div></div>
+          </div>
+
+          <div class="card-row">
+            <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"Lambda jalan saat object masuk S3." → Upload gambar ke bucket → S3 memicu event → Lambda jalan (mis. bikin thumbnail) → log hasilnya ke CloudWatch. Nggak ada server yang nyala 24/7.</div>
+            <div class="callout mindset"><span class="ic">🧠</span><span class="tag">Kapan pakai</span>Lambda pas untuk tugas <b>singkat &amp; event-driven</b> (resize gambar, proses webhook). Bukan untuk aplikasi yang jalan terus-menerus & berat — itu ranah EC2/container.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 12 · CloudWatch =================== -->
+      <section id="s12" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">11</span><h3>CloudWatch</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">"CCTV + logbook" AWS lo. Tempat ngumpulin metrics, logs, dan bikin alarm. Mata lo terhadap kesehatan sistem.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Metrics</code><span class="desc">Angka performa dari waktu ke waktu.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Data numerik seperti CPU EC2, koneksi RDS, durasi Lambda. Bisa di-grafik &amp; jadi dasar alarm.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Logs</code><span class="desc">Catatan teks dari aplikasi/service.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">CloudWatch Logs mengumpulkan log dari Lambda, EC2 (via agent), dll untuk dicari &amp; dianalisis.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Log Group &amp; Log Stream</code><span class="desc">Folder log &amp; aliran log per sumber.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner"><b>Log Group</b> = wadah log untuk satu aplikasi/fungsi (mis. <code>/aws/lambda/my-fn</code>). <b>Log Stream</b> = aliran log dari satu sumber/instance di dalam group.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Alarms</code><span class="desc">Picu aksi saat metric lewati ambang.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi: alarm bisa berbasis metric atau metric filter dari log. Saat state berubah, alarm bisa memicu notifikasi (SNS) atau aksi Auto Scaling/EC2/Lambda.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Dashboard</code><span class="desc">Panel visual gabungan metric.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Kumpulkan grafik penting di satu layar untuk pantauan cepat.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"CPU EC2 tinggi → alarm kirim notifikasi." → Buat CloudWatch Alarm pada metric <code>CPUUtilization</code> &gt; 80% selama X menit → saat terpicu, kirim notifikasi (lewat SNS — cukup tahu konsepnya dulu, detail SNS adalah <b>next step</b>).</div>
+          <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Aplikasi tanpa monitoring = nyetir malam tanpa lampu. Pasang alarm untuk metric kritikal (CPU, disk, error rate) <b>sebelum</b> masalah jadi insiden.</div>
+        </div>
+      </section>
+
+      <!-- =================== 13 · Route 53 =================== -->
+      <section id="s13" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">12</span><h3>Route 53 &amp; DNS</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">DNS managed AWS — "buku alamat" yang menerjemahkan nama domain jadi alamat resource. Bikin <code class="inline">app.domain.com</code> nunjuk ke server lo.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>Hosted Zone</code><span class="desc">Wadah record DNS untuk satu domain.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Kontainer semua DNS record milik domain lo (mis. <code>domain.com</code>).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>A Record</code><span class="desc">Domain → alamat IPv4.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Memetakan nama ke IP, mis. <code>app.domain.com → 13.250.x.x</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>CNAME</code><span class="desc">Domain → domain lain.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Alias ke nama domain lain. <b>Tidak bisa</b> dipakai di zone apex (root domain <code>domain.com</code>).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Alias Record</code><span class="desc">Domain → resource AWS (ALB, S3, CloudFront).</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi: ekstensi khusus Route 53. <b>Bisa</b> dipakai di zone apex (beda dari CNAME), otomatis mengikuti perubahan IP resource target, dan memakai TTL default resource tersebut. Ini cara tepat mengarahkan domain ke ALB/CloudFront.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>TTL</code><span class="desc">Berapa lama record di-cache.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Time To Live — makin kecil, perubahan makin cepat tersebar, tapi query lebih sering. (Alias mengikuti TTL target.)</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Real Case</span>"<code>app.domain.com</code> diarahkan ke ALB." → Buat <b>Alias record</b> di Hosted Zone yang menunjuk ke DNS Load Balancer. Pakai Alias (bukan CNAME) supaya bisa di root domain &amp; otomatis ikut kalau IP ALB berubah.</div>
+        </div>
+      </section>
+
+      <!-- =================== 14 · CloudFront =================== -->
+      <section id="s14" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">13</span><h3>CloudFront</h3><span class="badge">SINGKAT</span></div>
+          <p class="mod-sub">CDN AWS — cache konten di lokasi dekat user biar cepat. Cukup paham konsepnya dulu.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>CDN</code><span class="desc">Jaringan distribusi konten global.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Content Delivery Network — menyajikan konten dari server terdekat dengan user, mengurangi latency.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Edge Location</code><span class="desc">Titik cache di banyak kota dunia.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">User di Jakarta dilayani dari edge terdekat, bukan harus ke server origin yang jauh.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Origin</code><span class="desc">Sumber asli konten.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tempat konten asli berada — sering <b>S3</b> (file statis) atau ALB/EC2 (aplikasi).</div></div></div>
+            <div class="acc"><div class="acc-h"><code>Cache</code><span class="desc">Salinan konten di edge.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Konten yang sering diakses disimpan di edge agar request berikutnya super cepat tanpa hit origin.</div></div></div>
+          </div>
+
+          <div class="callout case"><span class="ic">🎯</span><span class="tag">Use Case · S3 + CloudFront + HTTPS</span>Pola umum: file statis (HTML/JS/gambar) di <b>S3</b>, dipasang <b>CloudFront</b> di depannya untuk cache global + <b>HTTPS</b>. Hasilnya: website statis cepat, aman, murah, dan tahan traffic besar.</div>
+        </div>
+      </section>
+
+      <!-- =================== 15 · AWS CLI =================== -->
+      <section id="s15" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">14</span><h3>AWS CLI</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Kendalikan AWS dari terminal — fondasi otomatisasi &amp; scripting. Wajib dikuasai DevOps.</p>
+
+          <div class="acc-list">
+            <div class="acc"><div class="acc-h"><code>aws configure</code><span class="desc">Setup access key, region, output.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Mengisi <b>Access Key ID</b>, <b>Secret Access Key</b>, <b>default region</b> (mis. <code>ap-southeast-1</code>), dan <b>output format</b> (json/table/text). Disimpan di <code>~/.aws/credentials</code> &amp; <code>~/.aws/config</code>.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>sts get-caller-identity</code><span class="desc">"Aku login sebagai siapa?"</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Tervalidasi: mengembalikan <b>Account ID, ARN, &amp; User ID</b> dari credential yang dipakai. Tidak butuh permission khusus. Command pertama untuk memastikan lo terhubung ke akun/identity yang benar.</div></div></div>
+            <div class="acc"><div class="acc-h"><code>region &amp; output</code><span class="desc">Konteks default tiap command.</span><span class="chev">▶</span></div><div class="acc-body"><div class="acc-body-inner">Banyak resource bersifat per-Region. Salah region = "resource nggak ketemu" padahal ada di region lain.</div></div></div>
+          </div>
+
+          <h4>Command Wajib</h4>
+          <div class="cmd">
+            <div class="cmd-bar"><div class="tl"><i></i><i></i><i></i></div><span class="ttl">aws-cli-basic.sh</span><button class="copy-btn">Copy</button></div>
+            <pre><span class="pr">$ </span>aws configure                 <span class="cm"># isi key, region, output</span>
+<span class="pr">$ </span>aws sts get-caller-identity   <span class="cm"># cek lo login sebagai siapa</span>
+<span class="pr">$ </span>aws s3 ls                      <span class="cm"># list bucket S3</span>
+<span class="pr">$ </span>aws ec2 describe-instances    <span class="cm"># lihat instance EC2</span></pre>
+          </div>
+
+          <div class="callout mistake"><span class="ic">💀</span><span class="tag">Warning Keamanan</span><b>Jangan share Access Key.</b> <b>Jangan commit credentials ke GitHub</b> — bot scanning bisa nemu &amp; pakai dalam hitungan menit (bisa kena tagihan ribuan dolar). Pakai <code class="inline">.gitignore</code>, environment, atau IAM role. Kalau key bocor, langsung <b>rotate/disable</b>.</div>
+
+          <div class="callout practice"><span class="ic">⚡</span><span class="tag">Mini Practice</span>Coba di <b>terminal simulator</b> di bawah → ketik <code class="inline">aws sts get-caller-identity</code>, lalu <code class="inline">aws s3 ls</code> dan <code class="inline">aws ec2 describe-instances</code>. Ketik <code class="inline">help</code> untuk daftar command.</div>
+
+          <!-- TERMINAL SIMULATOR -->
+          <div class="term">
+            <div class="term-bar"><div class="tl" style="display:flex;gap:6px"><i style="width:11px;height:11px;border-radius:50%;background:var(--terminal-red);display:inline-block"></i><i style="width:11px;height:11px;border-radius:50%;background:var(--terminal-orange);display:inline-block"></i><i style="width:11px;height:11px;border-radius:50%;background:var(--terminal-green);display:inline-block"></i></div><span class="ttl">aws-cli — simulator</span><span class="hint">type "help"</span></div>
+            <div class="term-body" id="termBody">
+              <div class="out muted">AWS CLI simulator (demo). Ketik <span class="ok">help</span> untuk lihat command yang tersedia.</div>
+            </div>
+            <div class="term-input-row"><span class="ps">$</span><input id="termInput" autocomplete="off" spellcheck="false" placeholder="ketik AWS CLI command lalu Enter..." /></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 16 · BILLING =================== -->
+      <section id="s16" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">15</span><h3>Billing &amp; Cost Awareness</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Skill DevOps yang sering dilupakan: <strong>jangan sampai lab belajar bikin tagihan kaget.</strong> Free Tier ada batasnya.</p>
+
+          <div class="callout warn"><span class="ic">💸</span><span class="tag">Yang Sering Bikin Tagihan</span>
+            <div style="line-height:1.95;margin-top:4px">
+              • <b>Free Tier ≠ semuanya gratis</b> — ada batas jam/kapasitas &amp; periode 12 bulan.<br/>
+              • <b>EC2 running</b> = kena biaya selama nyala (matikan kalau nggak dipakai).<br/>
+              • <b>EBS volume</b> tetap dibayar walau instance di-stop.<br/>
+              • <b>NAT Gateway</b> kena biaya per jam + per GB — bisa terasa mahal untuk pemula.<br/>
+              • <b>Load Balancer</b> kena biaya selama aktif.<br/>
+              • <b>Public IPv4</b> — tervalidasi via AWS Docs: sejak <b>1 Feb 2024</b> AWS mengenakan biaya per jam untuk public IPv4 (ada kuota Free Tier 750 jam/bulan selama 12 bulan untuk IP yang terpakai di EC2). Karena harga bisa berubah, <b>selalu cek AWS Pricing / Billing Dashboard terkini</b>.
+            </div>
+          </div>
+
+          <h4>Pakai Pengaman Biaya</h4>
+          <p>Set <strong>AWS Budgets</strong> + <strong>Billing Alarm</strong> agar dapat notifikasi saat biaya mendekati batas. Ini wajib sebelum mulai ngelab.</p>
+
+          <h4>Checklist Cleanup Setelah Lab</h4>
+          <div class="callout practice"><span class="ic">🧹</span><span class="tag">Sebelum Tutup Laptop</span>
+            <div style="line-height:1.95;margin-top:4px;font-family:var(--mono);font-size:13px;color:var(--text-dim)">
+              ☐ <b style="color:var(--text)">Terminate</b> EC2 yang tak dipakai<br/>
+              ☐ <b style="color:var(--text)">Delete</b> EBS volume nganggur<br/>
+              ☐ <b style="color:var(--text)">Delete</b> Load Balancer<br/>
+              ☐ <b style="color:var(--text)">Delete</b> NAT Gateway (kalau sempat dibuat)<br/>
+              ☐ <b style="color:var(--text)">Delete</b> RDS kalau lab selesai<br/>
+              ☐ <b style="color:var(--text)">Empty</b> &amp; delete S3 bucket yang tak dipakai<br/>
+              ☐ <b style="color:var(--text)">Cek</b> Billing Dashboard
+            </div>
+          </div>
+          <div class="callout mindset"><span class="ic">🧠</span><span class="tag">DevOps Mindset</span>Cost awareness itu bagian dari pekerjaan, bukan urusan finance doang. Engineer yang ngerti biaya = engineer yang dipercaya pegang production.</div>
+        </div>
+      </section>
+
+      <!-- =================== 17 · MINI PROJECT =================== -->
+      <section id="s17" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">16</span><h3>Mini Project End-to-End</h3></div>
+          <p class="mod-sub">"Deploy Simple Web App di AWS Core Services" — gabungkan semua yang dipelajari jadi satu arsitektur nyata.</p>
+
+          <div class="callout case" style="padding-left:16px"><span class="tag">Arsitektur Target</span><b>User → Route 53 → ALB → EC2 (Ubuntu/Nginx) → RDS (optional)</b>. Static asset optional di S3, monitoring di CloudWatch.</div>
+
+          <div class="flow" style="margin-top:14px">
+            <div class="flow-step"><div class="flow-node">1</div><div class="flow-content"><div class="q">Siapkan VPC</div><div class="ans">Untuk lab pemula, boleh pakai <b>default VPC</b> dulu — nggak perlu bikin dari nol.</div></div></div>
+            <div class="flow-step"><div class="flow-node">2</div><div class="flow-content"><div class="q">Launch EC2 Ubuntu</div><div class="cmd-mini">AMI Ubuntu · t3.micro · pasang key pair</div></div></div>
+            <div class="flow-step"><div class="flow-node">3</div><div class="flow-content"><div class="q">Install Nginx di EC2</div><div class="cmd-mini">sudo apt update &amp;&amp; sudo apt install nginx -y</div></div></div>
+            <div class="flow-step"><div class="flow-node">4</div><div class="flow-content"><div class="q">Buka port 80 di Security Group</div><div class="ans">Inbound HTTP (80) dari <code style="font-family:var(--mono);color:var(--orange-2)">0.0.0.0/0</code> · SSH (22) dibatasi ke IP lo.</div></div></div>
+            <div class="flow-step"><div class="flow-node">5</div><div class="flow-content"><div class="q">Test via public IP</div><div class="cmd-mini">http://&lt;public-ip&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">6</div><div class="flow-content"><div class="q">Buat Load Balancer (ALB)</div><div class="ans">Listener HTTP 80 → Target Group.</div></div></div>
+            <div class="flow-step"><div class="flow-node">7</div><div class="flow-content"><div class="q">Attach EC2 ke Target Group</div><div class="ans">Pastikan health check <b style="color:var(--green)">healthy</b>.</div></div></div>
+            <div class="flow-step"><div class="flow-node">8</div><div class="flow-content"><div class="q">Test via DNS Load Balancer</div><div class="cmd-mini">http://&lt;alb-dns-name&gt;</div></div></div>
+            <div class="flow-step"><div class="flow-node">9</div><div class="flow-content"><div class="q">Setup CloudWatch alarm (konsep)</div><div class="ans">Alarm CPU EC2 tinggi → notifikasi.</div></div></div>
+            <div class="flow-step"><div class="flow-node">10</div><div class="flow-content"><div class="q">Arahkan domain via Route 53 (optional)</div><div class="ans">Alias record → DNS ALB.</div></div></div>
+            <div class="flow-step"><div class="flow-node">11</div><div class="flow-content"><div class="q">Cleanup semua resource</div><div class="ans">Ikuti checklist di section Billing. <b>Wajib.</b></div></div></div>
+          </div>
+
+          <div class="callout warn"><span class="ic">⚠️</span><span class="tag">Catatan Biaya</span>Untuk lab pemula, <b>hindari NAT Gateway dan RDS</b> dulu jika belum siap dengan biayanya. Fokus ke EC2 + ALB + Nginx; RDS &amp; domain bisa menyusul.</div>
+        </div>
+      </section>
+
+      <!-- =================== 18 · TROUBLESHOOTING =================== -->
+      <section id="s18" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">17</span><h3>Troubleshooting Flow</h3></div>
+          <p class="mod-sub">"Website nggak bisa diakses!" — telusuri dari DNS sampai disk. Disiplin urutan = nemu masalah lebih cepat.</p>
+
+          <div class="flow">
+            <div class="flow-step"><div class="flow-node">1</div><div class="flow-content"><div class="q">DNS sudah benar?</div><div class="ans">Domain resolve ke ALB/IP yang tepat? Cek record Route 53.</div></div></div>
+            <div class="flow-step"><div class="flow-node">2</div><div class="flow-content"><div class="q">ALB healthy?</div><div class="ans">Listener aktif, ALB state normal?</div></div></div>
+            <div class="flow-step"><div class="flow-node">3</div><div class="flow-content"><div class="q">Target Group healthy?</div><div class="ans">Target lolos health check? Kalau semua unhealthy, ALB "fail open".</div></div></div>
+            <div class="flow-step"><div class="flow-node">4</div><div class="flow-content"><div class="q">EC2 running?</div><div class="ans">Instance state = running, bukan stopped.</div></div></div>
+            <div class="flow-step"><div class="flow-node">5</div><div class="flow-content"><div class="q">Security Group allow 80/443?</div><div class="ans">Inbound rule mengizinkan port web?</div></div></div>
+            <div class="flow-step"><div class="flow-node">6</div><div class="flow-content"><div class="q">Nginx running?</div><div class="cmd-mini">sudo systemctl status nginx</div></div></div>
+            <div class="flow-step"><div class="flow-node">7</div><div class="flow-content"><div class="q">Ada error di app log?</div><div class="cmd-mini">sudo tail -f /var/log/nginx/error.log</div></div></div>
+            <div class="flow-step"><div class="flow-node">8</div><div class="flow-content"><div class="q">Disk penuh?</div><div class="cmd-mini">df -h</div></div></div>
+            <div class="flow-step"><div class="flow-node">9</div><div class="flow-content"><div class="q">Cek CloudWatch metrics/logs</div><div class="ans">CPU spike? Error rate naik? Log error apa?</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================== 19 · CHEATSHEET =================== -->
+      <section id="s19" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">18</span><h3>Cheatsheet</h3></div>
+          <p class="mod-sub">Referensi cepat 15 service inti. Ketik di kotak cari untuk filter.</p>
+          <div class="sheet-controls"><input id="sheetSearch" placeholder="🔍 cari service / fungsi... (mis. 'database', 'dns', 'stateful')" /></div>
+          <div class="sheet-wrap">
+            <table id="sheet">
+              <thead><tr><th>Service</th><th>Fungsi</th><th>Kapan dipakai</th><th>Common mistake</th></tr></thead>
+              <tbody>
+                <tr><td><span class="svc">IAM</span></td><td>Atur identity &amp; izin</td><td>Setiap akun, sejak hari pertama</td><td>Pakai root harian; policy wildcard</td></tr>
+                <tr><td><span class="svc">VPC</span></td><td>Jaringan privat</td><td>Wadah semua resource</td><td>Salah desain public/private subnet</td></tr>
+                <tr><td><span class="svc">EC2</span></td><td>Server virtual</td><td>Jalankan app/web server</td><td>Lupa stop; SSH 22 ke 0.0.0.0/0</td></tr>
+                <tr><td><span class="svc">Security Group</span></td><td>Firewall stateful (instance)</td><td>Kontrol akses ke EC2/RDS</td><td>Buka SSH ke seluruh internet</td></tr>
+                <tr><td><span class="svc">NACL</span></td><td>Firewall stateless (subnet)</td><td>Lapis tambahan, blok IP spesifik</td><td>Lupa atur outbound/ephemeral</td></tr>
+                <tr><td><span class="svc">EBS</span></td><td>Disk block untuk EC2</td><td>Storage persisten server</td><td>Volume nganggur tetap bayar</td></tr>
+                <tr><td><span class="svc">AMI</span></td><td>Template server</td><td>Replikasi/scaling cepat</td><td>AMI basi tak pernah di-update</td></tr>
+                <tr><td><span class="svc">ALB</span></td><td>Bagi traffic HTTP/HTTPS</td><td>Web app production</td><td>Expose EC2 langsung tanpa LB</td></tr>
+                <tr><td><span class="svc">Auto Scaling</span></td><td>Skala instance otomatis</td><td>Traffic fluktuatif</td><td>Min/Max salah set</td></tr>
+                <tr><td><span class="svc">S3</span></td><td>Object storage</td><td>Artifact, backup, file statis</td><td>Bucket public sembarangan</td></tr>
+                <tr><td><span class="svc">RDS</span></td><td>Database managed</td><td>DB relasional production</td><td>DB publicly accessible</td></tr>
+                <tr><td><span class="svc">Lambda</span></td><td>Fungsi serverless</td><td>Tugas singkat event-driven</td><td>Dipakai untuk beban berat 24/7</td></tr>
+                <tr><td><span class="svc">CloudWatch</span></td><td>Metrics, logs, alarm</td><td>Monitoring &amp; debugging</td><td>Nggak pasang alarm sama sekali</td></tr>
+                <tr><td><span class="svc">Route 53</span></td><td>DNS managed</td><td>Arahkan domain ke resource</td><td>CNAME di zone apex (harus Alias)</td></tr>
+                <tr><td><span class="svc">CloudFront</span></td><td>CDN / cache global</td><td>Percepat konten statis</td><td>Lupa invalidate cache lama</td></tr>
+                <tr><td><span class="svc">AWS CLI</span></td><td>Kendali AWS dari terminal</td><td>Otomatisasi &amp; scripting</td><td>Commit access key ke GitHub</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="noResult" style="display:none;text-align:center;padding:22px;color:var(--text-faint);font-family:var(--mono);font-size:13px">// tidak ada service yang cocok</div>
+        </div>
+      </section>
+
+      <!-- =================== 20 · QUIZ =================== -->
+      <section id="s20" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">19</span><h3>Quiz Interaktif</h3></div>
+          <p class="mod-sub">15 soal untuk menguji pemahaman. Langsung dapat skor &amp; penjelasan tiap jawaban.</p>
+          <div class="quiz-head">
+            <div class="quiz-score">Skor: <b id="scoreNow">0</b> / 15 &nbsp;·&nbsp; Terjawab: <span id="answeredNow">0</span></div>
+            <button class="quiz-reset" id="quizReset">↻ Reset Quiz</button>
+          </div>
+          <div id="quiz"></div>
+          <div class="quiz-result" id="quizResult"><div class="big" id="resultScore">0/15</div><div class="msg" id="resultMsg"></div></div>
+        </div>
+      </section>
+
+      <!-- =================== 21 · MCP NOTES & REFS =================== -->
+      <section id="s21" class="reveal">
+        <div class="module">
+          <div class="mod-head"><span class="mod-num">20</span><h3>MCP Verified Notes &amp; References</h3><span class="badge verified">MCP Verified</span></div>
+          <p class="mod-sub">Materi ini disusun berdasarkan AWS Documentation yang divalidasi via AWS MCP Server pada saat pembuatan. Berikut fakta-fakta kunci yang dikonfirmasi langsung dari dokumentasi resmi.</p>
+
+          <h4>Fakta yang Divalidasi via MCP</h4>
+          <div class="mcp-grid">
+            <div class="mcp-item"><b>IAM — Root user</b>Best practice: root jarang dipakai, amankan dgn MFA, tanpa access key; gunakan identity/role least-privilege untuk daily work.</div>
+            <div class="mcp-item"><b>Security Group vs NACL</b>SG = level instance, stateful, allow-only. NACL = level subnet, stateless, allow+deny, perlu atur return traffic eksplisit.</div>
+            <div class="mcp-item"><b>S3 Block Public Access</b>Aktif secara default untuk semua bucket baru; jika butuh akses publik gunakan bucket policy, bukan ACL.</div>
+            <div class="mcp-item"><b>RDS Multi-AZ</b>Butuh DB subnet group ≥2 subnet di AZ berbeda; Multi-AZ DB cluster = 1 writer + 2 reader di 3 AZ (MySQL/PostgreSQL).</div>
+            <div class="mcp-item"><b>ALB Health Check</b>Hanya kirim traffic ke target sehat; jika SEMUA target unhealthy, ALB "fail open" ke semua target.</div>
+            <div class="mcp-item"><b>Route 53 Alias vs CNAME</b>Alias bisa di zone apex &amp; ikuti perubahan IP resource AWS; CNAME tidak bisa di zone apex.</div>
+            <div class="mcp-item"><b>EC2 Stop vs Terminate</b>Stop = instance dimatikan, EBS root tetap ada, restart umumnya dapat public IP baru. Terminate = dihapus permanen.</div>
+            <div class="mcp-item"><b>Lambda Handler</b>Handler = method entry-point yang dipanggil saat invoke; menerima event (payload) + context (metadata).</div>
+            <div class="mcp-item"><b>CloudWatch Alarm</b>Alarm berbasis metric / metric filter dari log; saat terpicu bisa kirim notifikasi (SNS) atau aksi Auto Scaling/EC2/Lambda.</div>
+            <div class="mcp-item"><b>AWS CLI Identity</b><code style="font-family:var(--mono);color:var(--orange-2)">aws sts get-caller-identity</code> mengembalikan Account ID, ARN, User ID; tidak butuh permission khusus.</div>
+            <div class="mcp-item"><b>Public IPv4 Charge</b>Sejak 1 Feb 2024, public IPv4 berbayar per jam; Free Tier 750 jam/bulan (12 bulan) untuk IP terpakai di EC2. Cek pricing terkini.</div>
+            <div class="mcp-item"><b>NAT Gateway Cost</b>Kena biaya provisioning per jam + per GB data diproses — bisa mahal untuk lab pemula.</div>
+          </div>
+
+          <h4>AWS Documentation Topics yang Dipakai</h4>
+          <ul class="ref-list">
+            <li>IAM — Root user best practices</li>
+            <li>IAM — Security best practices (identity &amp; access)</li>
+            <li>VPC — Security groups &amp; network ACLs</li>
+            <li>VPC — Control access to instances in a subnet</li>
+            <li>VPC — Pricing (NAT Gateway, Public IPv4)</li>
+            <li>EC2 — Stop and start your instance</li>
+            <li>EC2 — Auto-assign public IP</li>
+            <li>S3 — Block Public Access settings</li>
+            <li>RDS — Working with a DB instance in a VPC</li>
+            <li>RDS — Creating a Multi-AZ DB cluster</li>
+            <li>ELB — Health checks for ALB target groups</li>
+            <li>Route 53 — Choosing between alias &amp; non-alias records</li>
+            <li>Lambda — Function handler</li>
+            <li>CloudWatch — Alarming on logs &amp; metrics</li>
+            <li>AWS CLI — sts get-caller-identity reference</li>
+            <li>AWS News — Public IPv4 Address Charge &amp; Free Tier update</li>
+          </ul>
+
+          <div class="callout warn" style="margin-top:16px"><span class="ic">📌</span><span class="tag">Catatan Penting</span>Detail yang cepat berubah (harga, limit, free tier) <b>wajib dicek ulang</b> di AWS Pricing &amp; Billing Dashboard saat lo praktek — angka di sini hanya gambaran umum yang divalidasi pada saat pembuatan materi.</div>
+        </div>
+      </section>
+
+      <div class="foot">
+        <b>aws:// AWS Core Services</b> · Interactive Learning Dashboard untuk DevOps / Cloud Engineer<br/>
+        Disusun berdasarkan AWS Documentation yang divalidasi via AWS MCP Server · Bahasa Indonesia · 2026
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   DATA — Quiz (15 soal)
+   ============================================================ */
+const QUIZ = [
+  { q:"Service untuk object storage di AWS?", o:["EBS","S3","RDS","EFS"], a:1, e:"S3 (Simple Storage Service) adalah object storage." },
+  { q:"Service untuk DNS managed di AWS?", o:["CloudFront","Route 53","VPC","ELB"], a:1, e:"Route 53 adalah layanan DNS managed AWS." },
+  { q:"Security Group itu stateful atau stateless?", o:["Stateless","Stateful","Keduanya","Tergantung region"], a:1, e:"Security Group stateful — traffic balasan otomatis diizinkan. NACL yang stateless." },
+  { q:"Kenapa database sebaiknya di private subnet?", o:["Biar lebih murah","Biar tidak bisa diakses langsung dari internet","Biar lebih cepat","Wajib oleh AWS"], a:1, e:"Private subnet menyembunyikan DB dari internet → lebih aman." },
+  { q:"Command AWS CLI untuk cek identity yang sedang dipakai?", o:["aws whoami","aws iam list-users","aws sts get-caller-identity","aws ec2 describe-instances"], a:2, e:"aws sts get-caller-identity mengembalikan Account, ARN, User ID." },
+  { q:"Apa beda Stop dan Terminate pada EC2?", o:["Sama saja","Stop hapus permanen, Terminate matikan sementara","Stop matikan sementara (EBS tetap), Terminate hapus permanen","Keduanya menghapus data"], a:2, e:"Stop = dimatikan, EBS root tetap ada. Terminate = dihapus permanen." },
+  { q:"Apa fungsi Target Group pada ALB?", o:["Menyimpan file","Kumpulan target tujuan traffic yang dicek health-nya","Mengatur DNS","Backup database"], a:1, e:"Target Group = grup target (EC2) tempat ALB meneruskan traffic ke yang sehat." },
+  { q:"Apa fungsi CloudWatch Logs?", o:["Mengatur izin user","Menyimpan & menganalisis log aplikasi/service","Membagi traffic","Menyimpan object"], a:1, e:"CloudWatch Logs mengumpulkan log (mis. dari Lambda/EC2) untuk dicari & dianalisis." },
+  { q:"Komponen yang membuat VPC bisa terhubung ke internet?", o:["NAT Gateway","Internet Gateway","Route 53","Security Group"], a:1, e:"Internet Gateway (IGW) adalah pintu VPC ke internet." },
+  { q:"Untuk service-to-service access (mis. EC2 akses S3), sebaiknya pakai?", o:["Access key di-hardcode","IAM Role","Root user","Password"], a:1, e:"IAM Role memberi temporary credentials tanpa menyimpan key — cara aman." },
+  { q:"Block Public Access pada S3 bucket baru secara default?", o:["Nonaktif","Aktif","Tidak ada","Acak"], a:1, e:"Tervalidasi: Block Public Access aktif secara default untuk semua bucket baru." },
+  { q:"Record Route 53 yang bisa dipakai di zone apex & menunjuk ke ALB?", o:["CNAME","Alias record","TXT record","MX record"], a:1, e:"Alias record bisa di zone apex; CNAME tidak bisa." },
+  { q:"Lambda paling cocok untuk?", o:["Aplikasi berat jalan 24/7","Tugas singkat & event-driven","Hosting database","Menyimpan file besar permanen"], a:1, e:"Lambda untuk tugas singkat event-driven, bukan beban berat terus-menerus." },
+  { q:"Misconfig Security Group yang paling berbahaya?", o:["Buka port 443 ke publik","Buka SSH (22) ke 0.0.0.0/0","Menutup semua outbound","Memberi nama panjang"], a:1, e:"SSH 22 ke seluruh internet rawan brute-force — sangat berbahaya." },
+  { q:"Sebelum upgrade besar di server EC2, sebaiknya backup dengan?", o:["Hapus instance","Ambil EBS Snapshot","Matikan CloudWatch","Ubah Security Group"], a:1, e:"EBS Snapshot = backup point-in-time; bisa restore kalau upgrade gagal." },
+];
+
+/* ============================================================
+   DATA — AWS CLI simulator
+   ============================================================ */
+const TERM = {
+  "help": { cls:"out", t:
+`Command demo yang tersedia:
+  aws sts get-caller-identity
+  aws s3 ls
+  aws s3 cp index.html s3://my-bucket/
+  aws ec2 describe-instances
+  aws ec2 describe-regions
+  aws configure          clear      help` },
+  "aws sts get-caller-identity": { cls:"out", t:
+`{
+    "UserId": "AIDA1EXAMPLE7XYZ",
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/devops"
+}` },
+  "aws s3 ls": { cls:"out", t:
+`2026-05-02 09:14:31 my-frontend-artifacts
+2026-05-18 22:07:10 my-app-logs
+2026-06-01 11:42:55 my-static-site` },
+  "aws s3 cp index.html s3://my-bucket/": { cls:"ok", t:"upload: ./index.html to s3://my-bucket/index.html" },
+  "aws ec2 describe-instances": { cls:"out", t:
+`INSTANCE   i-0a1b2c3d4e5f  t3.micro  running   13.250.44.10
+  TAG  Name = web-server-01
+  TAG  Env  = lab
+STATE      running   az: ap-southeast-1a` },
+  "aws ec2 describe-regions": { cls:"out", t:
+`ap-southeast-1   Asia Pacific (Singapore)
+ap-southeast-3   Asia Pacific (Jakarta)
+us-east-1        US East (N. Virginia)
+eu-west-1        Europe (Ireland)` },
+  "aws configure": { cls:"warn", t:
+`AWS Access Key ID [None]: ****************EXAMPLE
+AWS Secret Access Key [None]: ****************KEY
+Default region name [None]: ap-southeast-1
+Default output format [None]: json
+# tersimpan di ~/.aws/credentials & ~/.aws/config
+# JANGAN commit file ini ke GitHub!` },
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* COPY */
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pre = btn.closest('.cmd').querySelector('pre');
+      const text = pre.innerText.replace(/^\$ /gm,'').replace(/\s+#.*$/gm,'').replace(/^\s*#.*$/gm,'').replace(/\n{2,}/g,'\n').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const old = btn.textContent; btn.textContent='✓ Copied'; btn.classList.add('done');
+        setTimeout(()=>{ btn.textContent=old; btn.classList.remove('done'); },1500);
+      }).catch(()=>{ btn.textContent='⚠ gagal'; setTimeout(()=>btn.textContent='Copy',1500); });
+    });
+  });
+
+  /* ACCORDION */
+  document.querySelectorAll('.acc-h').forEach(h => {
+    h.addEventListener('click', () => {
+      const acc = h.closest('.acc'); const body = acc.querySelector('.acc-body');
+      const open = acc.classList.toggle('open');
+      body.style.maxHeight = open ? body.scrollHeight + 'px' : '0';
+    });
+  });
+
+  /* PROGRESS */
+  const prog = document.getElementById('progress');
+  const onScroll = () => {
+    const h = document.documentElement; const max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max>0 ? (h.scrollTop/max)*100 : 0) + '%';
+  };
+  window.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+
+  /* REVEAL */
+  const revObs = new IntersectionObserver((es)=>{ es.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); revObs.unobserve(en.target); } }); }, { threshold:0.07 });
+  document.querySelectorAll('.reveal').forEach(el=>revObs.observe(el));
+
+  /* TOC ACTIVE */
+  const links = [...document.querySelectorAll('.toc a')]; const map = {};
+  links.forEach(a=>map[a.getAttribute('href').slice(1)]=a);
+  const tocObs = new IntersectionObserver((es)=>{ es.forEach(en=>{ if(en.isIntersecting){ links.forEach(l=>l.classList.remove('active')); const a=map[en.target.id]; if(a){ a.classList.add('active'); a.scrollIntoView({block:'nearest'}); } } }); }, { rootMargin:'-20% 0px -70% 0px' });
+  document.querySelectorAll('section[id]').forEach(s=>tocObs.observe(s));
+
+  /* MOBILE NAV */
+  const sidebar=document.getElementById('sidebar'), overlay=document.getElementById('overlay'), burger=document.getElementById('burger');
+  const toggleNav=(open)=>{ sidebar.classList.toggle('open',open); overlay.classList.toggle('show',open); };
+  burger.addEventListener('click',()=>toggleNav(!sidebar.classList.contains('open')));
+  overlay.addEventListener('click',()=>toggleNav(false));
+  document.querySelectorAll('.toc a').forEach(a=>a.addEventListener('click',()=>toggleNav(false)));
+
+  /* CHEATSHEET SEARCH */
+  const rows=[...document.querySelectorAll('#sheet tbody tr')], search=document.getElementById('sheetSearch'), noResult=document.getElementById('noResult');
+  search.addEventListener('input',()=>{
+    const q=search.value.toLowerCase().trim(); let shown=0;
+    rows.forEach(r=>{ const vis=!q||r.innerText.toLowerCase().includes(q); r.style.display=vis?'':'none'; if(vis)shown++; });
+    noResult.style.display=shown?'none':'block';
+  });
+
+  /* AWS CLI SIMULATOR */
+  const termBody=document.getElementById('termBody'), termInput=document.getElementById('termInput');
+  const esc=(s)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const printLine=(cmd)=>{ const d=document.createElement('div'); d.className='term-line'; d.innerHTML='<span class="ps">$</span><span>'+esc(cmd)+'</span>'; termBody.appendChild(d); };
+  const printOut=(cls,text)=>{ const d=document.createElement('div'); d.className='out '+(cls||''); d.innerHTML=esc(text); termBody.appendChild(d); };
+  const runTerm=(raw)=>{
+    const cmd=raw.trim().replace(/\s+/g,' '); if(!cmd) return;
+    if(cmd==='clear'){ termBody.innerHTML=''; return; }
+    printLine(cmd);
+    if(TERM[cmd]){ printOut(TERM[cmd].cls, TERM[cmd].t); }
+    else if(cmd.startsWith('aws ')){ printOut('err','Command demo ini belum tersedia di simulator. Ketik "help" untuk daftar.'); }
+    else { printOut('err', cmd.split(' ')[0]+': command not found — ketik "help"'); }
+    termBody.scrollTop=termBody.scrollHeight;
+  };
+  if(termInput){
+    termInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ runTerm(termInput.value); termInput.value=''; } });
+    termInput.closest('.term').addEventListener('click',()=>termInput.focus());
+  }
+
+  /* QUIZ */
+  const quizEl=document.getElementById('quiz'), scoreNow=document.getElementById('scoreNow'), answeredNow=document.getElementById('answeredNow');
+  const result=document.getElementById('quizResult'), resultScore=document.getElementById('resultScore'), resultMsg=document.getElementById('resultMsg');
+  const KEYS=['A','B','C','D']; let score=0, answered=0; const answeredSet=new Set();
+
+  function buildQuiz(){
+    quizEl.innerHTML=''; score=0; answered=0; answeredSet.clear();
+    scoreNow.textContent='0'; answeredNow.textContent='0'; result.classList.remove('show');
+    QUIZ.forEach((item,i)=>{
+      const card=document.createElement('div'); card.className='q-card';
+      let opts=''; item.o.forEach((opt,j)=>{ opts+=`<div class="q-opt" data-q="${i}" data-o="${j}"><span class="ky">${KEYS[j]}</span><span>${opt}</span></div>`; });
+      card.innerHTML=`<div class="q-num">SOAL ${String(i+1).padStart(2,'0')}</div><div class="q-text">${item.q}</div><div class="q-opts">${opts}</div><div class="q-feedback" id="fb-${i}"></div>`;
+      quizEl.appendChild(card);
+    });
+    quizEl.querySelectorAll('.q-opt').forEach(opt=>{
+      opt.addEventListener('click',()=>{
+        const qi=+opt.dataset.q, oi=+opt.dataset.o; if(answeredSet.has(qi)) return; answeredSet.add(qi);
+        const item=QUIZ[qi], card=opt.closest('.q-card'), allOpts=card.querySelectorAll('.q-opt');
+        allOpts.forEach(o=>o.classList.add('locked'));
+        const fb=document.getElementById('fb-'+qi);
+        if(oi===item.a){ opt.classList.add('correct'); score++; fb.className='q-feedback show right'; fb.textContent='✓ Benar! '+item.e; }
+        else { opt.classList.add('wrong'); allOpts[item.a].classList.add('correct'); fb.className='q-feedback show miss'; fb.textContent='✗ Kurang tepat. Jawaban: '+KEYS[item.a]+'. '+item.e; }
+        answered++; scoreNow.textContent=score; answeredNow.textContent=answered;
+        if(answered===QUIZ.length) showResult();
+      });
+    });
+  }
+  function showResult(){
+    resultScore.textContent=score+'/15'; let msg;
+    const pct=score/15;
+    if(pct===1) msg="🏆 Sempurna! Fondasi AWS lo siap tempur.";
+    else if(pct>=0.8) msg="🔥 Mantap! Core services lo udah solid.";
+    else if(pct>=0.6) msg="👍 Lumayan! Ulang service yang masih ragu, coba lagi.";
+    else msg="📚 Santai — baca ulang dari Mental Model, lo pasti bisa.";
+    resultMsg.textContent=msg; result.classList.add('show'); result.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  document.getElementById('quizReset').addEventListener('click',buildQuiz);
+  buildQuiz();
+
+});
+</script>
+</body>
+</html>

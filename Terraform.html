@@ -1,0 +1,2874 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terraform x AWS — Basic to Intermediate · Mini Bootcamp</title>
+<style>
+/* ============================================================
+   THEME TOKENS
+============================================================ */
+:root{
+  --font-mono: 'JetBrains Mono','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,'Liberation Mono',monospace;
+  --font-body: system-ui,-apple-system,'Segoe UI','Helvetica Neue',Arial,sans-serif;
+
+  /* Terraform violet is a brand color here, used deliberately and sparingly. */
+  --bg:#f3f5f0;
+  --bg-2:#e8edf0;
+  --surface:#fffefb;
+  --surface-2:#f7f8f5;
+  --surface-3:#e8edf0;
+  --border:#cbd6dc;
+  --border-soft:#dce4e7;
+  --text:#1b232d;
+  --text-dim:#3f4d5a;
+  --text-faint:#5d6b78;
+
+  --purple:#5f43b2;
+  --purple-deep:#4b358f;
+  --teal:#2f6374;
+  --cyan:#2c6687;
+  --amber:#7a5200;
+  --red:#a43d35;
+  --green:#236b49;
+
+  --code-bg:#101722;
+  --code-head:#172033;
+  --code-raised:#223049;
+  --code-border:#33435c;
+  --code-text:#e6edf7;
+  --code-dim:#aab8cc;
+  --code-comment:#8794a8;
+  --code-purple:#c9b8ff;
+  --code-green:#94d7a8;
+  --code-amber:#ffbf5a;
+  --code-blue:#9bd0e5;
+  --code-red:#f08a7a;
+
+  --radius:14px;
+  --radius-sm:9px;
+  --shadow:0 12px 28px -16px rgba(31,40,52,.22);
+  --glow:0 0 0 1px var(--border), 0 10px 36px -20px rgba(95,67,178,.38);
+  --sidebar-w:312px;
+  --maxw:880px;
+}
+[data-theme="dark"]{
+  --bg:#18202b;
+  --bg-2:#202a37;
+  --surface:#253141;
+  --surface-2:#2b3748;
+  --surface-3:#334153;
+  --border:#445268;
+  --border-soft:#38465a;
+  --text:#edf2f8;
+  --text-dim:#c1cad7;
+  --text-faint:#a8b3c2;
+  --purple:#c5b5ff;
+  --purple-deep:#8e78e5;
+  --teal:#9bc3cf;
+  --cyan:#99c9df;
+  --amber:#ffd083;
+  --red:#f29a8f;
+  --green:#a6d8b8;
+  --shadow:0 12px 28px -16px rgba(0,0,0,.55);
+  --glow:0 0 0 1px var(--border), 0 10px 36px -20px rgba(197,181,255,.45);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);
+  line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 12% -8%, rgba(95,67,178,.09), transparent 42%),
+    radial-gradient(circle at 92% 0%, rgba(47,99,116,.07), transparent 40%);
+  background-attachment:fixed;
+}
+
+/* ============================================================
+   TOPBAR
+============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:60;height:60px;
+  display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border-soft);
+}
+.brand{display:flex;align-items:center;gap:11px;font-family:var(--font-mono);font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.brand .logo{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--purple-deep),#2f6374);
+  color:#fff;font-weight:800;font-size:16px;box-shadow:0 6px 18px -8px var(--purple-deep);
+}
+.brand small{color:var(--text-faint);font-weight:500;font-size:11px;display:block;letter-spacing:.5px}
+.topbar .spacer{flex:1}
+.tf-ver{
+  font-family:var(--font-mono);font-size:12px;color:var(--teal);
+  border:1px solid var(--border);background:var(--surface);padding:5px 10px;border-radius:20px;white-space:nowrap;
+}
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);cursor:pointer;display:grid;place-items:center;
+  font-size:17px;transition:.18s;
+}
+.icon-btn:hover{border-color:var(--purple);color:var(--purple);transform:translateY(-1px)}
+#menuBtn{display:none}
+
+/* ============================================================
+   LAYOUT
+============================================================ */
+.layout{display:flex;align-items:flex-start}
+.sidebar{
+  position:sticky;top:60px;height:calc(100vh - 60px);width:var(--sidebar-w);
+  flex:0 0 var(--sidebar-w);overflow-y:auto;padding:18px 14px 60px;
+  border-right:1px solid var(--border-soft);background:var(--bg-2);
+}
+.sidebar::-webkit-scrollbar{width:9px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:9px}
+
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{
+  width:100%;padding:10px 12px 10px 34px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-family:var(--font-body);font-size:13.5px;outline:none;
+}
+.search-wrap input:focus{border-color:var(--purple)}
+.search-wrap .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-faint);font-size:14px}
+
+.progress-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:16px;
+}
+.progress-card .pc-top{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:8px;font-family:var(--font-mono)}
+.progress-card .pc-top b{color:var(--teal)}
+.bar{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}
+.bar > i{display:block;height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,var(--purple-deep),#2f6374);transition:width .4s ease}
+.reset-prog{margin-top:9px;font-size:11px;color:var(--text-faint);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;font-family:var(--font-mono)}
+.reset-prog:hover{color:var(--red)}
+
+.nav-group-title{font-family:var(--font-mono);font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-faint);margin:16px 8px 7px}
+.sidebar nav a{
+  display:flex;gap:9px;align-items:baseline;padding:7px 11px;border-radius:9px;color:var(--text-dim);
+  text-decoration:none;font-size:13.5px;transition:.13s;border:1px solid transparent;line-height:1.35;
+}
+.sidebar nav a .num{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);min-width:20px}
+.sidebar nav a:hover{background:var(--surface);color:var(--text)}
+.sidebar nav a.active{background:var(--surface-2);color:var(--purple);border-color:var(--border);font-weight:600}
+.sidebar nav a.active .num{color:var(--purple)}
+.nav-hidden{display:none!important}
+
+/* ============================================================
+   MAIN
+============================================================ */
+main{flex:1;min-width:0;padding:34px 40px 120px;max-width:calc(var(--maxw) + 80px);margin:0 auto}
+.hero{
+  border:1px solid var(--border);border-radius:18px;padding:34px 32px;margin-bottom:34px;position:relative;overflow:hidden;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(47,99,116,.10), transparent 55%),
+    linear-gradient(160deg, var(--surface-2), var(--surface));
+}
+.hero .kicker{font-family:var(--font-mono);color:var(--teal);font-size:12.5px;letter-spacing:2px;text-transform:uppercase}
+.hero h1{font-family:var(--font-mono);font-size:34px;line-height:1.18;margin:12px 0 8px;letter-spacing:-.5px}
+.hero h1 .ac{color:var(--purple)}
+.hero p{color:var(--text-dim);max-width:62ch;margin:0 0 18px}
+.hero .pills{display:flex;flex-wrap:wrap;gap:8px}
+.hero .pills span{
+  font-family:var(--font-mono);font-size:11.5px;padding:5px 11px;border-radius:20px;
+  border:1px solid var(--border);background:var(--bg);color:var(--text-dim);
+}
+
+section{scroll-margin-top:78px;margin-bottom:14px}
+.chapter{
+  border:1px solid var(--border-soft);border-radius:var(--radius);background:var(--surface);
+  margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow);
+}
+.chapter > .ch-head{
+  display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer;user-select:none;
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+  border-bottom:1px solid transparent;transition:.2s;
+}
+.chapter.open > .ch-head{border-bottom-color:var(--border-soft)}
+.chapter > .ch-head:hover{background:var(--surface-2)}
+.ch-head .ch-num{
+  font-family:var(--font-mono);font-weight:700;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--purple-deep),var(--purple));
+  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;
+  box-shadow:0 6px 16px -8px var(--purple-deep);
+}
+.ch-head h2{font-family:var(--font-mono);font-size:18.5px;margin:0;flex:1;letter-spacing:-.3px;line-height:1.3}
+.ch-head .chev{color:var(--text-faint);font-size:15px;transition:.25s;font-family:var(--font-mono)}
+.chapter.open .ch-head .chev{transform:rotate(90deg);color:var(--purple)}
+.ch-head .est{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);border:1px solid var(--border);padding:3px 8px;border-radius:14px;white-space:nowrap}
+
+.ch-body{display:none;padding:8px 24px 26px}
+.chapter.open .ch-body{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* typography inside chapters */
+.ch-body h3{font-family:var(--font-mono);font-size:16px;margin:26px 0 8px;color:var(--text);letter-spacing:-.2px;border-left:3px solid var(--purple);padding-left:11px}
+.ch-body h4{font-family:var(--font-mono);font-size:14px;margin:20px 0 6px;color:var(--teal)}
+.ch-body p{margin:10px 0;color:var(--text)}
+.ch-body ul,.ch-body ol{margin:10px 0;padding-left:22px}
+.ch-body li{margin:6px 0}
+.ch-body a{color:var(--cyan);text-decoration:none;border-bottom:1px dashed var(--cyan)}
+.ch-body a:hover{opacity:.8}
+.ch-body strong{color:var(--text)}
+.ch-body code:not(pre code){
+  font-family:var(--font-mono);font-size:.86em;background:var(--surface-3);color:var(--teal);
+  padding:2px 6px;border-radius:6px;border:1px solid var(--border-soft);
+}
+.lead{font-size:17px;color:var(--text-dim)!important}
+hr.soft{border:none;border-top:1px solid var(--border-soft);margin:24px 0}
+
+/* analogy */
+.analogy{
+  background:linear-gradient(135deg, color-mix(in srgb,var(--purple) 12%,transparent), transparent);
+  border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:10px;padding:12px 16px;margin:14px 0;
+}
+.analogy::before{content:"🧩 Analogi";font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--purple);display:block;margin-bottom:4px;font-weight:700}
+
+/* ============================================================
+   CALLOUTS
+============================================================ */
+.box{border:1px solid var(--border);border-radius:11px;padding:13px 16px 13px 46px;margin:16px 0;position:relative;background:var(--surface-2)}
+.box::before{position:absolute;left:14px;top:13px;font-size:17px}
+.box .bt{font-family:var(--font-mono);font-weight:700;font-size:12.5px;letter-spacing:.5px;display:block;margin-bottom:2px}
+.box p:first-of-type{margin-top:2px}
+.box p:last-child{margin-bottom:0}
+.box.danger{border-color:color-mix(in srgb,var(--red) 50%,var(--border));background:color-mix(in srgb,var(--red) 9%,var(--surface))}
+.box.danger::before{content:"⛔"} .box.danger .bt{color:var(--red)}
+.box.warn{border-color:color-mix(in srgb,var(--amber) 45%,var(--border));background:color-mix(in srgb,var(--amber) 8%,var(--surface))}
+.box.warn::before{content:"⚠️"} .box.warn .bt{color:var(--amber)}
+.box.cost{border-color:color-mix(in srgb,var(--amber) 40%,var(--border));background:color-mix(in srgb,var(--amber) 6%,var(--surface))}
+.box.cost::before{content:"💸"} .box.cost .bt{color:var(--amber)}
+.box.sec{border-color:color-mix(in srgb,var(--teal) 45%,var(--border));background:color-mix(in srgb,var(--teal) 8%,var(--surface))}
+.box.sec::before{content:"🛡️"} .box.sec .bt{color:var(--teal)}
+.box.tip{border-color:color-mix(in srgb,var(--green) 42%,var(--border));background:color-mix(in srgb,var(--green) 7%,var(--surface))}
+.box.tip::before{content:"💡"} .box.tip .bt{color:var(--green)}
+.box.info{border-color:color-mix(in srgb,var(--cyan) 42%,var(--border));background:color-mix(in srgb,var(--cyan) 7%,var(--surface))}
+.box.info::before{content:"ℹ️"} .box.info .bt{color:var(--cyan)}
+.box.clean{border-color:var(--border);background:var(--surface-3)}
+.box.clean::before{content:"🧹"} .box.clean .bt{color:var(--text-dim)}
+
+/* ============================================================
+   CODE BLOCKS
+============================================================ */
+.code{margin:16px 0;border-radius:11px;overflow:hidden;border:1px solid var(--code-border);background:var(--code-bg)}
+.code-head{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--code-head);border-bottom:1px solid var(--code-border);
+}
+.code-head .dots{display:flex;gap:6px}
+.code-head .dots i{width:11px;height:11px;border-radius:50%;display:block}
+.code-head .dots i:nth-child(1){background:#ff5f57}.code-head .dots i:nth-child(2){background:#febc2e}.code-head .dots i:nth-child(3){background:#28c840}
+.code-head .fname{font-family:var(--font-mono);font-size:11.5px;color:var(--code-dim);margin-left:6px}
+.code-head .copy{
+  margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--code-dim);background:var(--code-raised);
+  border:1px solid var(--code-border);padding:4px 10px;border-radius:7px;cursor:pointer;transition:.15s;
+}
+.code-head .copy:hover{color:var(--code-green);border-color:var(--code-green)}
+.code-head .copy.ok{color:var(--code-green);border-color:var(--code-green)}
+.code pre{margin:0;padding:15px 16px;overflow-x:auto;font-family:var(--font-mono);font-size:13px;line-height:1.62;color:var(--code-text)}
+.code pre::-webkit-scrollbar{height:9px}
+.code pre::-webkit-scrollbar-thumb{background:#3a4a64;border-radius:9px}
+/* tiny token coloring via spans */
+.tok-k{color:var(--code-purple)}.tok-s{color:var(--code-green)}.tok-c{color:var(--code-comment);font-style:italic}.tok-n{color:var(--code-amber)}.tok-a{color:var(--code-blue)}.tok-r{color:var(--code-red)}
+
+/* ============================================================
+   TABLES
+============================================================ */
+.tbl-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:11px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+th{background:var(--surface-2);font-family:var(--font-mono);font-size:12px;color:var(--teal);letter-spacing:.4px;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td code{white-space:nowrap}
+
+/* ============================================================
+   QUIZ
+============================================================ */
+.quiz{border:1px dashed var(--border);border-radius:12px;padding:16px 18px;margin:22px 0;background:var(--surface-2)}
+.quiz .qz-title{font-family:var(--font-mono);font-size:13px;color:var(--purple);letter-spacing:.5px;margin-bottom:4px;font-weight:700}
+.quiz .qz-sub{font-size:12.5px;color:var(--text-faint);margin-bottom:14px}
+.q{margin:16px 0;padding-top:14px;border-top:1px solid var(--border-soft)}
+.q:first-of-type{border-top:none;padding-top:0}
+.q .qq{font-weight:600;margin-bottom:9px;font-size:14.5px}
+.q .qq .tag{font-family:var(--font-mono);font-size:10px;color:var(--text-faint);border:1px solid var(--border);padding:2px 6px;border-radius:10px;margin-right:8px;text-transform:uppercase}
+.opt{
+  display:block;width:100%;text-align:left;margin:6px 0;padding:9px 13px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13.5px;font-family:var(--font-body);transition:.13s;
+}
+.opt:hover{border-color:var(--purple)}
+.opt.correct{border-color:var(--green);background:color-mix(in srgb,var(--green) 14%,var(--surface));color:var(--text)}
+.opt.wrong{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--surface))}
+.opt .mk{float:right;font-family:var(--font-mono);font-weight:700}
+.explain{display:none;margin-top:8px;font-size:13px;color:var(--text-dim);border-left:3px solid var(--teal);padding:6px 12px;background:var(--surface-3);border-radius:0 8px 8px 0}
+.explain.show{display:block;animation:fade .3s}
+details.answer{margin-top:10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-3)}
+details.answer summary{cursor:pointer;padding:9px 13px;font-family:var(--font-mono);font-size:12.5px;color:var(--amber);list-style:none}
+details.answer summary::-webkit-details-marker{display:none}
+details.answer summary::before{content:"▸ ";color:var(--amber)}
+details.answer[open] summary::before{content:"▾ "}
+details.answer .ans-body{padding:0 14px 13px;font-size:13.5px;color:var(--text-dim)}
+
+/* exercise / lab markers */
+.tagline{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:4px 11px;border-radius:20px;margin:18px 0 4px;font-weight:700}
+.tagline.lab{background:color-mix(in srgb,var(--teal) 16%,transparent);color:var(--teal);border:1px solid color-mix(in srgb,var(--teal) 40%,var(--border))}
+.tagline.ex{background:color-mix(in srgb,var(--purple) 16%,transparent);color:var(--purple);border:1px solid color-mix(in srgb,var(--purple) 40%,var(--border))}
+.tagline.cap{background:linear-gradient(135deg,var(--purple-deep),#2f6374);color:#fff;border:none}
+
+/* file tree */
+.tree{font-family:var(--font-mono);font-size:12.8px;line-height:1.75;background:var(--code-bg);border:1px solid var(--code-border);border-radius:11px;padding:14px 16px;margin:14px 0;color:var(--code-text);overflow-x:auto}
+.tree .dir{color:var(--code-blue)}
+.tree .cmt{color:var(--code-comment)}
+
+/* checklist */
+.checklist{list-style:none;padding:0;margin:14px 0}
+.checklist li{display:flex;gap:11px;align-items:flex-start;padding:9px 12px;border:1px solid var(--border-soft);border-radius:9px;margin:7px 0;background:var(--surface-2)}
+.checklist input{margin-top:4px;width:17px;height:17px;accent-color:var(--purple);cursor:pointer;flex:0 0 auto}
+.checklist label{cursor:pointer;font-size:14px}
+.checklist li.done label{color:var(--text-faint);text-decoration:line-through}
+
+/* glossary */
+.gloss{margin:16px 0}
+.gloss dt{font-family:var(--font-mono);color:var(--purple);font-weight:700;font-size:14px;margin-top:14px}
+.gloss dd{margin:3px 0 0;color:var(--text-dim);font-size:14px}
+
+/* mentor cards */
+.week-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:16px 0}
+.week-card{border:1px solid var(--border);border-radius:12px;padding:15px 16px;background:var(--surface-2)}
+.week-card h4{margin:0 0 8px;color:var(--purple)}
+.week-card ul{padding-left:18px;margin:0;font-size:13.5px;color:var(--text-dim)}
+
+.footer{text-align:center;color:var(--text-faint);font-family:var(--font-mono);font-size:12px;padding:30px 0 0;border-top:1px solid var(--border-soft);margin-top:40px}
+.footer b{color:var(--text-dim)}
+
+.backtop{position:fixed;right:22px;bottom:22px;z-index:50;opacity:0;pointer-events:none;transition:.25s}
+.backtop.show{opacity:1;pointer-events:auto}
+
+/* responsive */
+@media(max-width:1080px){:root{--sidebar-w:280px}}
+@media(max-width:880px){
+  #menuBtn{display:grid}
+  .sidebar{position:fixed;left:0;top:60px;z-index:55;transform:translateX(-105%);transition:transform .28s ease;width:300px;box-shadow:var(--shadow)}
+  .sidebar.open{transform:none}
+  main{padding:24px 18px 100px}
+  .hero{padding:26px 20px}
+  .hero h1{font-size:26px}
+  .ch-head h2{font-size:16px}
+  .scrim{position:fixed;inset:60px 0 0;background:rgba(27,35,45,.36);z-index:54;display:none}
+  .scrim.show{display:block}
+}
+@media(min-width:881px){.scrim{display:none}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button>
+  <div class="brand">
+    <span class="logo">tf</span>
+    <span>Terraform × AWS<small>BASIC → INTERMEDIATE · MINI BOOTCAMP</small></span>
+  </div>
+  <span class="spacer"></span>
+  <span class="tf-ver" id="tfVerBadge">Terraform 1.14.x · AWS provider ~&gt; 6.0</span>
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle tema">🌙</button>
+</header>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="search-wrap">
+      <span class="si">🔎</span>
+      <input id="search" type="text" placeholder="Cari topik… (mis. state, modul, vpc)">
+    </div>
+    <div class="progress-card">
+      <div class="pc-top"><span>Progress belajar</span><b><span id="progPct">0</span>%</b></div>
+      <div class="bar"><i id="progBar"></i></div>
+      <button class="reset-prog" id="resetProg">reset progress</button>
+    </div>
+    <div class="nav-group-title">Fondasi</div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <main id="main">
+    <div class="hero">
+      <div class="kicker">// Infrastructure as Code · Self-study + Mentoring</div>
+      <h1>Belajar <span class="ac">Terraform</span> buat AWS,<br>dari nol sampai <span class="ac">pede deploy</span>.</h1>
+      <p>Modul mini-bootcamp untuk kamu yang lagi switch karier ke Cloud/DevOps. Fokus praktik, banyak lab hands-on, plus catatan keamanan ala DevSecOps. Kita pakai Terraform versi stable terbaru dan AWS provider terkini.</p>
+      <div class="pills">
+        <span>🟢 Terraform 1.14.x (stable)</span>
+        <span>☁️ AWS only</span>
+        <span>🧪 8 Lab hands-on</span>
+        <span>🏁 1 Capstone Project</span>
+        <span>🛡️ Security best practice</span>
+        <span>💸 Cost-aware</span>
+      </div>
+    </div>
+
+<!-- ============ CH 1 : OPENING ============ -->
+<section id="c1"><div class="chapter open" data-ch="1">
+  <div class="ch-head"><span class="ch-num">01</span><h2>Opening — Kenapa Kita Belajar Terraform</h2><span class="est">~20 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p class="lead">Selamat datang. Anggap aja ini hari pertama kamu masuk "tim infra". Di akhir modul ini kamu bakal bisa <strong>bikin infrastruktur AWS cuma dari kode</strong> — VPC, subnet, security group, EC2 yang jalanin Nginx — terus hapus semuanya lagi dengan satu perintah. Rapi, bisa diulang, dan ke-track di Git.</p>
+
+    <h3>Apa yang bakal kamu bangun</h3>
+    <p>Sepanjang modul, kamu naik level pelan-pelan lewat lab kecil sampai akhirnya bikin <strong>capstone project</strong>: sebuah web app sederhana di AWS (VPC + subnet publik + security group + EC2 + Nginx + S3 + remote state) yang semuanya dideklarasikan pakai Terraform. Cost-aware, jadi dompet aman.</p>
+
+    <h3>Terraform itu apa, sih?</h3>
+    <p><strong>Terraform</strong> adalah tool <em>Infrastructure as Code</em> (IaC) buatan HashiCorp. Intinya: kamu nulis file teks yang mendeskripsikan "infrastruktur yang aku mau kayak gini", lalu Terraform yang ngurusin gimana caranya bikin itu beneran ada di AWS lewat API.</p>
+    <div class="analogy">
+      Bayangin kamu mau bangun rumah. Cara lama: kamu telepon tukang satu-satu, instruksiin manual ("pasang pintu di sini, jendela di situ"). Tiap mau bangun rumah baru, ngulang dari nol dan gampang lupa. <br><br>
+      Terraform itu kayak <strong>blueprint/denah rumah</strong>. Kamu tulis sekali, kasih ke "kontraktor" (Terraform), dan dia yang eksekusi sesuai gambar. Mau bangun 10 rumah identik? Tinggal pakai blueprint yang sama. Mau bongkar? Kasih perintah bongkar, beres.
+    </div>
+
+    <h3>Kenapa ini penting banget buat Cloud/DevOps Engineer</h3>
+    <ul>
+      <li><strong>Repeatability</strong> — infra dev, staging, prod bisa dibikin identik. Gak ada lagi "kok di prod beda ya, padahal di staging jalan".</li>
+      <li><strong>Auditability</strong> — semua perubahan infra lewat Git. Siapa ngubah apa, kapan, kenapa — kelihatan di history & pull request.</li>
+      <li><strong>Collaboration</strong> — tim review perubahan infra kayak review kode biasa, sebelum di-apply.</li>
+      <li><strong>Disaster recovery</strong> — region kebakaran? Tinggal <code>terraform apply</code> di region lain. Infra-nya udah jadi kode.</li>
+      <li><strong>Speed + konsistensi</strong> — klik manual 40 resource di Console itu lama dan rawan typo. Kode gak pernah capek dan gak salah klik.</li>
+    </ul>
+
+    <h3>Manual lewat Console vs Terraform</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th>Aspek</th><th>Klik manual di AWS Console</th><th>Terraform (IaC)</th></tr>
+      <tr><td>Bikin ulang</td><td>Ngulang klik dari awal</td><td><code>terraform apply</code></td></tr>
+      <tr><td>Dokumentasi</td><td>Di kepala / screenshot</td><td>Kodenya = dokumentasi</td></tr>
+      <tr><td>Review perubahan</td><td>Susah, gak ada diff</td><td>Diff jelas via <code>plan</code> + PR</td></tr>
+      <tr><td>Rollback</td><td>Manual, error-prone</td><td>Revert commit, apply lagi</td></tr>
+      <tr><td>Konsistensi env</td><td>Sering "drift"</td><td>Sama persis dari kode</td></tr>
+      <tr><td>Skala</td><td>Capek &amp; lama</td><td>Sama gampangnya buat 1 atau 100</td></tr>
+    </table></div>
+    <div class="box info"><span class="bt">Bukan berarti Console jelek</span><p>Console tetap berguna buat eksplorasi, debugging, dan lihat-lihat. Tapi untuk infra yang kamu pakai serius &amp; berulang, IaC jauh lebih aman. Pola umum: <em>eksplor di Console, produksi di Terraform.</em></p></div>
+
+    <h3>"Declarative" itu maksudnya gimana?</h3>
+    <p>Terraform itu <strong>declarative</strong>: kamu mendeskripsikan <em>kondisi akhir yang diinginkan</em> ("aku mau 1 EC2 t3.micro di subnet publik"), bukan langkah-langkahnya ("nyalain instance, tunggu, attach ENI, ..."). Itu lawannya <em>imperative</em>.</p>
+    <div class="analogy">
+      Declarative = pesan di restoran: "Aku mau nasi goreng pedas." Kamu gak ngajarin chef cara masaknya. <br>
+      Imperative = kamu masuk dapur dan ngasih instruksi tiap langkah: "panaskan wajan, tuang minyak, ...". <br>
+      Terraform = kamu kasih "menu" akhir, dia yang mikirin urutan masaknya. Kalau kamu jalanin lagi dan kondisinya udah sesuai, dia gak masak ulang (ini disebut <strong>idempotency</strong>).
+    </div>
+
+    <div class="box tip"><span class="bt">Cara pakai modul ini</span><p>Tiap chapter bisa di-klik buka/tutup. Centang <em>"Tandai selesai"</em> di akhir chapter buat ngisi progress bar. Pakai kotak <strong>Search</strong> di sidebar buat loncat ke topik. Ada tombol 🌙 di pojok kanan atas buat ganti tema. Semua progress disimpan di browser kamu (kalau dibuka sebagai file lokal).</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch1-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 2 : PREREQUISITES ============ -->
+<section id="c2"><div class="chapter" data-ch="2">
+  <div class="ch-head"><span class="ch-num">02</span><h2>Prerequisites — Siapin Tempat Latihan</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Sebelum nulis kode, kita siapin "bengkel"-nya dulu. Centang sambil kamu beresin — ini juga ngisi progress bar.</p>
+
+    <h3>Checklist kesiapan</h3>
+    <ul class="checklist">
+      <li><input type="checkbox" data-prog="pre-aws"><label>Punya <strong>AWS account</strong> (idealnya akun khusus belajar, bukan akun produksi kantor)</label></li>
+      <li><input type="checkbox" data-prog="pre-iam"><label>Bikin <strong>IAM user/role khusus belajar</strong> (jangan pakai root!) + akses programmatic</label></li>
+      <li><input type="checkbox" data-prog="pre-cli"><label><strong>AWS CLI</strong> terinstall</label></li>
+      <li><input type="checkbox" data-prog="pre-cliconf"><label>AWS CLI udah <strong>dikonfigurasi</strong> (<code>aws configure</code> atau SSO)</label></li>
+      <li><input type="checkbox" data-prog="pre-tf"><label><strong>Terraform stable terbaru</strong> terinstall (1.14.x)</label></li>
+      <li><input type="checkbox" data-prog="pre-vscode"><label><strong>VS Code</strong> + extension HashiCorp Terraform</label></li>
+      <li><input type="checkbox" data-prog="pre-git"><label><strong>Git</strong> terinstall</label></li>
+      <li><input type="checkbox" data-prog="pre-term"><label>Nyaman pakai <strong>terminal</strong> basic (cd, ls, mkdir, env var)</label></li>
+      <li><input type="checkbox" data-prog="pre-awsbasic"><label>Paham konsep dasar AWS: IAM, VPC, EC2, Security Group, S3, RDS, Load Balancer</label></li>
+    </ul>
+
+    <h3>Verifikasi instalasi</h3>
+    <p>Setelah semua kepasang, jalanin ini buat mastiin tool-nya bener:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># Cek versi Terraform (harus 1.14.x atau stable terbaru)
+terraform version
+
+# Cek versi AWS CLI
+aws --version
+
+# Cek kamu lagi login sebagai siapa di AWS (paling penting!)
+aws sts get-caller-identity</code></pre></div>
+    <p>Perintah ketiga itu jagoan: dia ngasih tahu Account ID, User ARN, dan UserId yang lagi aktif. Kalau ini jalan, berarti kredensial AWS kamu udah kebaca Terraform juga.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">contoh output</span><button class="copy">copy</button></div>
+<pre><code class="lang-json">{
+    "UserId": "AIDAEXAMPLE1234567890",
+    "Account": "123456789012",
+    "Arn": "arn:aws:iam::123456789012:user/tf-learner"
+}</code></pre></div>
+
+    <div class="box cost"><span class="bt">PERINGATAN BIAYA AWS</span><p>Terraform bisa bikin resource AWS yang <strong>berbayar</strong>. EC2, NAT Gateway, Elastic IP nganggur, Load Balancer, RDS — semua ngitung duit, kadang per jam. Di modul ini kita sengaja milih resource murah/gratis-tier dan <strong>selalu</strong> ada bagian "Bersih-bersih" tiap lab. Jangan pernah lupa <code>terraform destroy</code> kalau udah kelar latihan.</p></div>
+    <div class="box sec"><span class="bt">Rekomendasi akun aman buat belajar</span><p>Pakai <strong>akun AWS terpisah</strong> khusus sandbox kalau bisa. Aktifkan <strong>MFA</strong> di root, simpan root rapat-rapat, dan kerja sehari-hari pakai IAM user/role least-privilege. Set juga <strong>AWS Budgets</strong> + alert email biar kaget-nya di email, bukan di tagihan akhir bulan.</p></div>
+
+    <h3>Region yang disarankan</h3>
+    <p>Karena kamu di Indonesia, dua pilihan paling masuk akal:</p>
+    <ul>
+      <li><code>ap-southeast-3</code> — <strong>Jakarta</strong>. Latency paling kecil dari sini.</li>
+      <li><code>ap-southeast-1</code> — <strong>Singapore</strong>. Region tua, paling lengkap fiturnya, harga sering lebih murah.</li>
+    </ul>
+    <p>Buat belajar, dua-duanya oke. Modul ini default pakai <code>ap-southeast-1</code> di contoh, tapi gampang diganti lewat variable. Konsisten pilih satu region biar gak bingung nyari resource "hilang" (padahal cuma beda region).</p>
+
+    <div class="box warn"><span class="bt">Jangan pakai access key root</span><p>Access key dari akun <em>root</em> = kunci master seluruh akun. Kalau bocor, habis sudah. Selalu bikin IAM identity terpisah. Nanti di chapter keamanan kita bahas cara yang lebih aman lagi (temporary credentials, SSO, OIDC).</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch2-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 3 : INSTALLATION ============ -->
+<section id="c3"><div class="chapter" data-ch="3">
+  <div class="ch-head"><span class="ch-num">03</span><h2>Instalasi Terraform</h2><span class="est">~15 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <div class="box info"><span class="bt">Versi yang kita pakai</span><p>Per modul ini ditulis, <strong>versi stable terbaru ada di seri 1.14.x</strong> (terverifikasi <code>v1.14.6</code> di halaman rilis resmi HashiCorp, dengan patch lanjutan seperti 1.14.9). Seri <strong>1.15.x masih <em>alpha</em></strong> — jangan dipakai buat belajar/produksi. Selalu cek <a href="https://github.com/hashicorp/terraform/releases" target="_blank" rel="noopener">github.com/hashicorp/terraform/releases</a> dan ambil yang <em>Latest</em> (bukan pre-release).</p></div>
+
+    <h4>macOS (Homebrew)</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">macOS</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+terraform version</code></pre></div>
+
+    <h4>Linux (Ubuntu/Debian, repo resmi HashiCorp)</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">linux</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">wget -O- https://apt.releases.hashicorp.com/gpg | \
+  sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+  https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+  sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update &amp;&amp; sudo apt install terraform
+terraform version</code></pre></div>
+
+    <h4>Windows</h4>
+    <p>Pakai <strong>winget</strong> atau <strong>Chocolatey</strong>:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">powershell</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># winget
+winget install Hashicorp.Terraform
+
+# atau Chocolatey
+choco install terraform</code></pre></div>
+
+    <div class="box warn"><span class="bt">Hindari script installer asal comot</span><p>Jangan <code>curl ... | bash</code> dari sumber gak jelas. Itu artinya kamu ngejalanin kode orang lain dengan hak penuh tanpa baca. Pakai package manager resmi (brew/apt/winget) atau download binary langsung dari <a href="https://developer.hashicorp.com/terraform/install" target="_blank" rel="noopener">situs HashiCorp</a> dan verifikasi checksum-nya.</p></div>
+
+    <h3>Kenapa version pinning itu penting</h3>
+    <p>Tiap tim/mesin idealnya pakai versi Terraform yang sama. Beda versi bisa bikin perilaku beda, format state beda, atau fitur yang gak ada. Makanya nanti di kode kita kunci versi pakai <code>required_version</code> (di blok <code>terraform {}</code>). Itu mencegah teman setim apply pakai versi yang terlalu lawas/baru.</p>
+
+    <h4>Multi-versi: tfenv / asdf &amp; file <code>.terraform-version</code></h4>
+    <p>Kalau kamu pegang banyak project dengan versi Terraform beda-beda, pakai version manager:</p>
+    <ul>
+      <li><strong>tfenv</strong> — khusus Terraform.</li>
+      <li><strong>asdf</strong> — multi-tool (Terraform, Node, Python, dll).</li>
+    </ul>
+    <p>Keduanya baca file <code>.terraform-version</code> di root project. Isinya cuma satu baris versi, misal <code>1.14.6</code>. Jadi pas <code>cd</code> ke folder project, versi yang dipakai otomatis nyesuain. Praktis buat kerja tim.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">.terraform-version</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">1.14.6</code></pre></div>
+
+    <div class="box tip"><span class="bt">Rekomendasi buat belajar</span><p>Pakai versi <strong>stable terbaru (1.14.x)</strong>. Install extension <em>HashiCorp Terraform</em> di VS Code juga — dapet autocomplete, format on save, dan highlight error. Bikin belajar jauh lebih enak.</p></div>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 1–3</div>
+      <div class="qz-sub">Klik jawaban buat lihat benar/salah. Gak ada skor, santai.</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Apa keunggulan utama pendekatan <em>declarative</em> Terraform?</div>
+        <button class="opt" data-correct="false">Kita harus nulis tiap langkah eksekusi secara berurutan</button>
+        <button class="opt" data-correct="true">Kita mendeskripsikan kondisi akhir, Terraform yang mikirin caranya</button>
+        <button class="opt" data-correct="false">Terraform cuma bisa dipakai lewat AWS Console</button>
+        <div class="explain">Declarative = deskripsikan <em>desired state</em>. Terraform menghitung selisihnya dan menjalankan perubahan yang perlu saja (idempotent).</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">true/false</span>Seri Terraform 1.15.x adalah versi stable yang direkomendasikan untuk belajar.</div>
+        <button class="opt" data-correct="false">True</button>
+        <button class="opt" data-correct="true">False</button>
+        <div class="explain">Per modul ini, 1.15.x masih <em>alpha</em>. Yang stable adalah seri 1.14.x. Selalu ambil rilis ber-label <em>Latest</em>.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">singkat</span>Perintah apa buat memastikan kredensial AWS-mu kebaca dengan benar?</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body"><code>aws sts get-caller-identity</code> — menampilkan Account ID, ARN, dan UserId identity yang aktif.</div></details>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch3-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 4 : MENTAL MODEL ============ -->
+<section id="c4"><div class="chapter" data-ch="4">
+  <div class="ch-head"><span class="ch-num">04</span><h2>Mental Model — Cara Mikir ala Terraform</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p class="lead">Sebelum ngoding, kita pasang "kacamata"-nya dulu. Kalau model mental ini nyantol, sisanya tinggal sintaks.</p>
+
+    <h3>Peta konsep inti</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th>Konsep</th><th>Analogi</th><th>Penjelasan singkat</th></tr>
+      <tr><td><strong>Config files (.tf)</strong></td><td>Blueprint</td><td>File teks (HCL) berisi deskripsi infra yang kamu mau.</td></tr>
+      <tr><td><strong>Provider</strong></td><td>Penerjemah</td><td>Plugin yang ngobrol ke API AWS. Tanpa ini Terraform gak ngerti "EC2" itu apa.</td></tr>
+      <tr><td><strong>Resource</strong></td><td>Barang yang dibikin</td><td>Objek nyata yang Terraform <em>kelola</em>: bucket, instance, subnet.</td></tr>
+      <tr><td><strong>Data source</strong></td><td>Hasil "nanya"</td><td>Baca info yang <em>sudah ada</em> di AWS (mis. AMI terbaru). Read-only.</td></tr>
+      <tr><td><strong>State</strong></td><td>Ingatan Terraform</td><td>Catatan apa yang udah dibikin &amp; mapping ke ID asli AWS.</td></tr>
+      <tr><td><strong>Plan</strong></td><td>Preview / dry-run</td><td>"Kalau aku apply, ini yang bakal berubah." Belum ngubah apa-apa.</td></tr>
+      <tr><td><strong>Apply</strong></td><td>Eksekusi</td><td>Beneran bikin/ubah/hapus resource di AWS.</td></tr>
+      <tr><td><strong>Destroy</strong></td><td>Bongkar</td><td>Hapus semua resource yang dikelola config ini.</td></tr>
+      <tr><td><strong>Drift</strong></td><td>"Beda dari catatan"</td><td>Saat infra asli berubah di luar Terraform (mis. diklik manual).</td></tr>
+      <tr><td><strong>Backend</strong></td><td>Lemari arsip</td><td>Tempat nyimpen state (lokal, atau remote di S3).</td></tr>
+      <tr><td><strong>Module</strong></td><td>Komponen reusable</td><td>Paket config yang bisa dipakai ulang, kayak fungsi.</td></tr>
+      <tr><td><strong>Dependency graph</strong></td><td>Urutan kerja</td><td>Terraform otomatis tau mana harus dibikin duluan.</td></tr>
+    </table></div>
+
+    <h3>Gambaran besar alurnya</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">alur kerja</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">tulis .tf  ─▶  terraform init    # download provider + siapin backend
+           ─▶  terraform fmt     # rapikan format
+           ─▶  terraform validate# cek sintaks &amp; konsistensi
+           ─▶  terraform plan     # preview perubahan (aman, gak ngubah)
+           ─▶  terraform apply    # eksekusi → infra beneran ada
+           ─▶  (pakai infranya)
+           ─▶  terraform destroy  # bongkar saat udah gak perlu</code></pre></div>
+
+    <div class="analogy">
+      <strong>State = ingatan.</strong> Bayangin Terraform itu asisten yang nyatet di buku: "Aku udah bikin bucket X dengan ID abc, EC2 Y dengan ID i-123." Pas kamu <code>apply</code> lagi, dia buka catatan, bandingin sama kode kamu, dan cuma ngerjain selisihnya. Kalau catatan ini hilang/rusak, dia "amnesia" dan bisa salah ngira resource belum ada → bikin dobel. Makanya state itu <strong>sakral</strong>.
+    </div>
+
+    <div class="box info"><span class="bt">Plan dulu, baru apply</span><p>Kebiasaan emas: <strong>selalu baca output <code>plan</code></strong> sebelum <code>apply</code>. Perhatikan simbol: <code>+</code> create, <code>~</code> update in-place, <code>-/+</code> replace (hapus lalu bikin ulang — bahaya kalau itu database!), <code>-</code> destroy.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch4-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 5 : FIRST PROJECT ============ -->
+<section id="c5"><div class="chapter" data-ch="5">
+  <div class="ch-head"><span class="ch-num">05</span><h2>Project Pertama — S3 Bucket</h2><span class="est">~40 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <span class="tagline lab">🧪 Lab 1</span>
+    <p>Kita mulai dari yang aman &amp; murah: bikin satu <strong>S3 bucket</strong>. Bucket gratis dibikin (bayar kalau diisi data besar / banyak request), jadi sempurna buat lab pertama.</p>
+
+    <h3>Struktur project</h3>
+    <div class="tree"><span class="dir">terraform-s3-basic/</span>
+├── main.tf       <span class="cmt"># resource utama (bucket)</span>
+├── variables.tf  <span class="cmt"># input yang bisa diubah</span>
+├── outputs.tf    <span class="cmt"># nilai yang ditampilkan setelah apply</span>
+└── versions.tf   <span class="cmt"># kunci versi Terraform &amp; provider</span></div>
+
+    <h4>versions.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">versions.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">terraform {
+  required_version = "&gt;= 1.10"          # minimal versi Terraform
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 6.0"                 # izinkan 6.x, tahan dari breaking 7.x
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~&gt; 3.6"
+    }
+  }
+}</code></pre></div>
+    <p>Penjelasan: <code>required_version</code> mengunci versi Terraform CLI. <code>required_providers</code> mendaftar plugin yang dibutuhkan beserta batas versinya. <code>~&gt; 6.0</code> artinya "boleh 6.x apa pun, tapi jangan loncat ke 7.0" (proteksi dari breaking change major).</p>
+
+    <h4>variables.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">variables.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "aws_region" {
+  description = "Region AWS yang dipakai"
+  type        = string
+  default     = "ap-southeast-1"
+}
+
+variable "bucket_prefix" {
+  description = "Prefix nama bucket (akan ditambah suffix acak)"
+  type        = string
+  default     = "tf-belajar"
+}</code></pre></div>
+
+    <h4>main.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">main.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># provider AWS — "penerjemah" ke API AWS
+provider "aws" {
+  region = var.aws_region
+}
+
+# nama bucket S3 harus unik SE-DUNIA, jadi kita tambah suffix acak
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+# resource utama: satu S3 bucket
+resource "aws_s3_bucket" "lab" {
+  bucket = "${var.bucket_prefix}-${random_id.suffix.hex}"
+
+  tags = {
+    Project   = "belajar-terraform"
+    ManagedBy = "terraform"
+    Env       = "lab"
+  }
+}
+
+# best practice: matikan akses publik secara eksplisit
+resource "aws_s3_bucket_public_access_block" "lab" {
+  bucket                  = aws_s3_bucket.lab.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}</code></pre></div>
+    <p>Baris per baris: <code>random_id</code> bikin 4 byte acak → di-render jadi hex (8 karakter). Kita gabung ke nama bucket biar gak tabrakan sama orang lain (ingat, namespace bucket itu global!). <code>aws_s3_bucket.lab.id</code> di resource kedua = <strong>implicit dependency</strong>: Terraform otomatis tau bucket harus jadi dulu sebelum public access block.</p>
+
+    <h4>outputs.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">outputs.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">output "bucket_name" {
+  description = "Nama bucket yang dibuat"
+  value       = aws_s3_bucket.lab.bucket
+}
+
+output "bucket_arn" {
+  value = aws_s3_bucket.lab.arn
+}</code></pre></div>
+
+    <h3>Jalankan workflow-nya</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">cd terraform-s3-basic
+
+terraform init       # download provider aws + random
+terraform fmt        # rapikan indentasi
+terraform validate   # cek sintaks
+terraform plan       # preview: harusnya "3 to add"
+terraform apply      # ketik 'yes' buat konfirmasi</code></pre></div>
+
+    <h4>Contoh output plan</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">output</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">Plan: 3 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + bucket_arn  = (known after apply)
+  + bucket_name = (known after apply)</code></pre></div>
+    <p>Setelah <code>apply</code>, Terraform nampilin <code>bucket_name</code> dan <code>bucket_arn</code>. Coba cek di AWS Console (region yang sama) — bucketnya nongol!</p>
+
+    <span class="tagline ex">✎ Mini exercise</span>
+    <ul>
+      <li>Tambah satu tag baru <code>Owner = "namamu"</code> lalu <code>apply</code> lagi. Perhatikan plan: harusnya <code>~ 1 to change</code>, bukan replace.</li>
+      <li>Jalankan <code>terraform plan</code> tanpa ngubah apa-apa. Harusnya <em>"No changes"</em> — ini bukti <strong>idempotency</strong>.</li>
+    </ul>
+
+    <div class="box clean"><span class="bt">Bersih-bersih setelah Lab 1</span><p>Begitu selesai eksplor, hapus semuanya:</p>
+<div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform destroy   # ketik 'yes'</code></pre></div>
+    <p style="margin-bottom:0">Yang dibersihkan: 1 S3 bucket + public access block + (random_id cuma di state, gak ada biaya). Pastikan bucket <strong>kosong</strong> sebelum destroy, atau Terraform gagal hapus bucket berisi.</p></div>
+
+    <div class="box danger"><span class="bt"><code>terraform destroy</code> itu permanen</span><p>Destroy menghapus resource sungguhan di AWS, <strong>tanpa recycle bin</strong>. Di lab gak masalah. Tapi di lingkungan nyata, salah <code>destroy</code> bisa hapus database produksi. Selalu baca daftar resource yang mau dihapus sebelum ketik <code>yes</code>.</p></div>
+
+    <h3>Error umum di lab ini</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th>Pesan</th><th>Penyebab</th><th>Fix</th></tr>
+      <tr><td><code>BucketAlreadyExists</code></td><td>Nama bucket dipakai orang lain (global)</td><td>Suffix acak biasanya cukup; ganti <code>bucket_prefix</code> kalau perlu</td></tr>
+      <tr><td><code>InvalidClientTokenId</code></td><td>Kredensial salah/expired</td><td>Cek <code>aws sts get-caller-identity</code></td></tr>
+      <tr><td><code>NoCredentialProviders</code></td><td>Belum <code>aws configure</code></td><td>Konfigurasi CLI / set profile</td></tr>
+    </table></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch5-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 6 : LANGUAGE BASICS ============ -->
+<section id="c6"><div class="chapter" data-ch="6">
+  <div class="ch-head"><span class="ch-num">06</span><h2>HCL — Bahasa Terraform</h2><span class="est">~45 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p class="lead">HCL (HashiCorp Configuration Language) itu gampang dibaca manusia. Strukturnya: <em>blocks</em> berisi <em>arguments</em> yang bernilai <em>expressions</em>.</p>
+
+    <h3>Anatomi dasar: block, argument, expression</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">anatomi.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "web" {   # &lt;- block: tipe "resource", label "aws_instance" & "web"
+  ami           = "ami-123"       # &lt;- argument (key = value)
+  instance_type = "t3.micro"      # &lt;- value-nya = expression (string literal)
+  count         = 1 + 1           # &lt;- expression bisa hitung
+}</code></pre></div>
+
+    <h3>Tipe data</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">tipe.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">string = "halo"
+number = 42
+bool   = true
+
+list   = ["a", "b", "c"]              # urut, boleh duplikat
+map    = { env = "dev", tier = "web" } # key-value
+object = {                            # struktur bersarang
+  name = "web"
+  port = 80
+}</code></pre></div>
+
+    <h3>Comments</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">comments.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># komentar satu baris (gaya umum)
+// komentar satu baris (gaya alternatif)
+/* komentar
+   beberapa baris */</code></pre></div>
+
+    <h3>Variables, Outputs, Locals</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">vars-locals.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># INPUT: bisa diisi dari luar
+variable "env" {
+  type    = string
+  default = "dev"
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.env)
+    error_message = "env harus dev/staging/prod."
+  }
+}
+
+# LOCALS: nilai turunan, dihitung sekali, dipakai berkali-kali
+locals {
+  name_prefix = "myapp-${var.env}"
+  common_tags = {
+    Project   = "myapp"
+    Env       = var.env
+    ManagedBy = "terraform"
+  }
+}
+
+# OUTPUT: nilai yang ditampilkan / dipakai modul lain
+output "name_prefix" {
+  value = local.name_prefix
+}</code></pre></div>
+    <div class="box tip"><span class="bt">Variable vs Local — bedanya?</span><p><strong>Variable</strong> = input dari luar (bisa diubah saat apply). <strong>Local</strong> = nilai turunan internal, gak bisa di-override dari luar. Pakai local buat menghindari pengulangan (DRY), mis. <code>common_tags</code> yang dipasang ke semua resource.</p></div>
+
+    <h3>Sensitive variables</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">sensitive.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "db_password" {
+  type      = string
+  sensitive = true   # nilainya disembunyikan dari output CLI
+}
+
+output "db_password_out" {
+  value     = var.db_password
+  sensitive = true   # WAJIB kalau output menyentuh nilai sensitif
+}</code></pre></div>
+    <div class="box warn"><span class="bt">Catatan penting soal <code>sensitive = true</code></span><p>Ini cuma menyembunyikan nilai dari <em>tampilan</em> CLI. Nilainya <strong>tetap tersimpan plain di state file</strong>. Kita bahas tuntas di chapter Keamanan ("kenapa sensitive ≠ aman 100%").</p></div>
+
+    <h3>Mengisi variable: tfvars &amp; env var</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terraform.tfvars</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">aws_region    = "ap-southeast-3"
+env           = "dev"
+bucket_prefix = "tim-data"</code></pre></div>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># lewat environment variable (prefix TF_VAR_)
+export TF_VAR_env=staging
+export TF_VAR_aws_region=ap-southeast-1
+
+# atau file tfvars spesifik
+terraform apply -var-file="prod.tfvars"
+
+# atau langsung di CLI
+terraform apply -var="env=prod"</code></pre></div>
+    <p>Urutan prioritas (yang belakang menang): default &lt; <code>terraform.tfvars</code> &lt; <code>*.auto.tfvars</code> &lt; <code>TF_VAR_*</code> &lt; <code>-var-file</code> &lt; <code>-var</code>.</p>
+
+    <h3>Functions, conditional, for, dynamic</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">expressions.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># FUNCTIONS — built-in, banyak banget
+locals {
+  upper_env  = upper(var.env)              # "DEV"
+  joined     = join("-", ["a", "b"])       # "a-b"
+  bucket     = lower("MyApp-${var.env}")   # "myapp-dev"
+  az_count   = length(["a", "b", "c"])     # 3
+}
+
+# CONDITIONAL (ternary): kondisi ? jika_benar : jika_salah
+locals {
+  instance_type = var.env == "prod" ? "t3.medium" : "t3.micro"
+}
+
+# FOR expression — transform list/map
+locals {
+  upper_names = [for n in ["web", "db"] : upper(n)]   # ["WEB", "DB"]
+}
+
+# DYNAMIC block — bikin block berulang dari data
+resource "aws_security_group" "web" {
+  name = "web-sg"
+  dynamic "ingress" {
+    for_each = var.allowed_ports          # mis. [80, 443]
+    content {
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16"]
+    }
+  }
+}</code></pre></div>
+    <div class="box info"><span class="bt">Kapan pakai <code>dynamic</code>?</span><p>Saat jumlah block (mis. rule ingress) bergantung pada variable/data, bukan jumlah tetap. Jangan over-pakai — kalau cuma 2 rule fix, tulis manual lebih kebaca.</p></div>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 4–6</div>
+      <div class="qz-sub">Tes pemahaman dasar bahasa &amp; konsep.</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Apa fungsi <code>terraform plan</code>?</div>
+        <button class="opt" data-correct="false">Langsung bikin resource di AWS</button>
+        <button class="opt" data-correct="true">Preview perubahan tanpa mengubah infra</button>
+        <button class="opt" data-correct="false">Menghapus state file</button>
+        <div class="explain">Plan = dry-run. Aman dijalankan kapan saja; tidak menyentuh infra.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Beda <code>variable</code> dan <code>local</code>?</div>
+        <button class="opt" data-correct="true">Variable = input dari luar; local = nilai turunan internal</button>
+        <button class="opt" data-correct="false">Sama saja, cuma beda nama</button>
+        <button class="opt" data-correct="false">Local bisa di-override dari CLI, variable tidak</button>
+        <div class="explain">Local justru TIDAK bisa di-override dari luar; ia dihitung dari ekspresi internal.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">true/false</span><code>sensitive = true</code> membuat nilai terenkripsi dan aman di state.</div>
+        <button class="opt" data-correct="false">True</button>
+        <button class="opt" data-correct="true">False</button>
+        <div class="explain">Ia hanya menyembunyikan dari tampilan CLI. Nilai tetap plain di state file.</div>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch6-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 7 : AWS PROVIDER ============ -->
+<section id="c7"><div class="chapter" data-ch="7">
+  <div class="ch-head"><span class="ch-num">07</span><h2>AWS Provider — Lebih Dalam</h2><span class="est">~30 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Provider adalah jembatan ke API AWS. Tanpa provider, Terraform cuma tahu sintaks tapi gak ngerti "EC2" atau "S3" itu apa.</p>
+
+    <h3>Mendaftarkan provider</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">versions.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">terraform {
+  required_version = "&gt;= 1.10"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"   # alamat di Terraform Registry
+      version = "~&gt; 6.0"          # constraint versi provider
+    }
+  }
+}</code></pre></div>
+    <ul>
+      <li><strong>source</strong> — alamat provider di registry (<code>hashicorp/aws</code>).</li>
+      <li><strong>version</strong> — batas versi provider (per modul ini, AWS provider terbaru di seri <strong>6.x</strong>).</li>
+      <li><strong>required_version</strong> — versi <em>Terraform CLI</em>-nya.</li>
+    </ul>
+    <div class="box info"><span class="bt">CLI version vs Provider version</span><p>Dua hal beda! <strong>Terraform CLI</strong> = mesin inti (mis. 1.14.6). <strong>AWS provider</strong> = plugin yang dirilis terpisah (mis. 6.47.0) dan punya siklus rilis sendiri. Keduanya di-pin terpisah.</p></div>
+
+    <h3>Konfigurasi provider &amp; autentikasi</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">provider.tf — cara aman</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  region  = var.aws_region
+  profile = var.aws_profile   # pakai named profile dari AWS CLI
+}</code></pre></div>
+    <p>Terraform mencari kredensial AWS secara berurutan (mirip AWS SDK):</p>
+    <ol>
+      <li>Environment variables: <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code></li>
+      <li>Shared config/credentials file (<code>~/.aws/credentials</code>) via <code>profile</code></li>
+      <li>AWS SSO / IAM Identity Center</li>
+      <li>IAM Role yang di-attach ke instance/CI (mis. lewat OIDC)</li>
+    </ol>
+
+    <h4>Assume Role</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">assume-role.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  region = var.aws_region
+  assume_role {
+    role_arn     = "arn:aws:iam::123456789012:role/terraform-deployer"
+    session_name = "terraform-session"
+  }
+}</code></pre></div>
+    <p>Konsep <strong>assume role</strong>: identity-mu "meminjam" role lain yang punya izin spesifik, dapet kredensial sementara (auto-expire). Ini pola standar buat cross-account &amp; CI/CD yang aman.</p>
+
+    <div class="box danger"><span class="bt">JANGAN hardcode access key</span><p>Tulisan kayak ini di kode adalah dosa besar keamanan:</p>
+<div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">JANGAN ditiru</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  access_key = "AKIA_CONTOH_REDACTED"          # &lt;- BOCOR kalau ke-commit!
+  secret_key = "CONTOH_SECRET_KEY_REDACTED" # &lt;- bahaya!
+}</code></pre></div>
+    <p style="margin-bottom:0">Begitu masuk Git, kunci ini ada selamanya di history meski dihapus belakangan. Pakai profile, env var, SSO, atau role. <strong>Selalu.</strong></p></div>
+
+    <div class="box sec"><span class="bt">Kenapa version provider harus di-pin?</span><p>Tanpa pin, <code>terraform init</code> bisa narik versi provider terbaru yang mungkin punya breaking change → plan kamu tiba-tiba beda. Pin (<code>~&gt; 6.0</code>) + commit file <code>.terraform.lock.hcl</code> bikin build reproducible di semua mesin/CI.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch7-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 8 : STATE ============ -->
+<section id="c8"><div class="chapter" data-ch="8">
+  <div class="ch-head"><span class="ch-num">08</span><h2>Terraform State — Ingatan yang Sakral</h2><span class="est">~40 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p class="lead">Ini chapter paling kritis. Salah ngurus state = mimpi buruk. Pahami baik-baik.</p>
+
+    <h3>Apa itu <code>terraform.tfstate</code>?</h3>
+    <p>File JSON yang jadi "ingatan" Terraform: mapping antara resource di kode-mu dengan objek nyata di AWS (lengkap dengan ID, atribut, dependency). Saat <code>plan</code>, Terraform bandingin tiga hal: <strong>kode</strong> ↔ <strong>state</strong> ↔ <strong>realita AWS</strong>.</p>
+
+    <div class="box danger"><span class="bt">State itu SENSITIF</span><p>State bisa berisi data rahasia dalam bentuk <strong>plain text</strong>: password RDS, private key, secret, token. Siapa pun yang baca state file = baca semua rahasia infra-mu.</p></div>
+
+    <h3>Jangan commit state ke Git!</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">.gitignore</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl   # opsional: banyak tim JUSTRU commit ini (lihat catatan)
+crash.log
+*.tfvars              # hati-hati: tfvars sering berisi rahasia
+override.tf
+override.tf.json</code></pre></div>
+    <div class="box tip"><span class="bt">Soal <code>.terraform.lock.hcl</code></span><p>Banyak tim <strong>justru commit</strong> file lock ini supaya versi provider konsisten antar mesin. Yang WAJIB di-ignore adalah <code>*.tfstate</code> dan folder <code>.terraform/</code>. Untuk <code>*.tfvars</code>: ignore yang berisi rahasia, tapi sediakan <code>terraform.tfvars.example</code> yang aman.</p></div>
+
+    <h3>Local state vs Remote state</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>Local state</th><th>Remote state (S3)</th></tr>
+      <tr><td>Lokasi</td><td>File di laptop kamu</td><td>Di S3 (terpusat)</td></tr>
+      <tr><td>Kolaborasi</td><td>Susah, gampang konflik</td><td>Tim share state yang sama</td></tr>
+      <tr><td>Locking</td><td>Tidak ada</td><td>Ada (<code>use_lockfile</code>)</td></tr>
+      <tr><td>Aman dari laptop hilang</td><td>Tidak</td><td>Ya (+ versioning)</td></tr>
+      <tr><td>Cocok untuk</td><td>Latihan solo</td><td>Tim &amp; produksi</td></tr>
+    </table></div>
+
+    <h3>State locking &amp; drift</h3>
+    <p><strong>Locking</strong> = saat satu orang lagi <code>apply</code>, orang lain dikunci biar gak nabrak (state corrupt). <strong>Drift</strong> = saat realita AWS berbeda dari state (mis. ada yang ngubah security group lewat Console). <code>terraform plan</code> akan mendeteksi drift dan nawarin "betulin balik".</p>
+
+    <h3>Inspeksi state dengan aman</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform state list                 # daftar semua resource di state
+terraform state show aws_s3_bucket.lab  # detail satu resource
+terraform refresh                    # sinkron state dgn realita (kini: 'apply -refresh-only')
+terraform plan -refresh-only         # cara modern lihat drift tanpa ubah apa-apa</code></pre></div>
+    <div class="box info"><span class="bt"><code>terraform refresh</code> masih ada?</span><p>Masih ada tapi <strong>di-deprecate</strong> sebagai perintah berdiri sendiri. Cara modern: <code>terraform apply -refresh-only</code> atau <code>terraform plan -refresh-only</code> — lebih aman karena kamu lihat dulu apa yang berubah sebelum state di-update.</p></div>
+
+    <h3>Import resource yang sudah ada</h3>
+    <p>Punya resource yang dibikin manual dan mau "diadopsi" ke Terraform? Pakai <code>import</code>. Cara modern (deklaratif) pakai <code>import</code> block:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">import.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">import {
+  to = aws_s3_bucket.legacy
+  id = "nama-bucket-yang-udah-ada"
+}
+
+resource "aws_s3_bucket" "legacy" {
+  bucket = "nama-bucket-yang-udah-ada"
+}</code></pre></div>
+    <p>Lalu <code>terraform plan</code> akan nunjukin rencana import. (Cara lama: <code>terraform import aws_s3_bucket.legacy nama-bucket</code> — masih jalan, tapi import block lebih bisa di-review lewat PR.)</p>
+
+    <h3><code>taint</code> sudah usang — pakai <code>-replace</code></h3>
+    <p>Dulu buat maksa bikin ulang resource pakai <code>terraform taint</code>. Sekarang <strong>di-deprecate</strong>. Cara modern:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform plan  -replace="aws_instance.web"   # lihat dulu efeknya
+terraform apply -replace="aws_instance.web"   # paksa replace resource ini</code></pre></div>
+
+    <div class="box danger"><span class="bt">JANGAN edit state file pakai tangan</span><p>Jangan pernah buka <code>terraform.tfstate</code> di editor lalu ubah manual — kecuali kamu benar-benar paham konsekuensinya dan sudah backup. Salah edit = Terraform "amnesia" → bisa bikin dobel atau hapus resource salah. Pakai perintah <code>terraform state</code> resmi (<code>mv</code>, <code>rm</code>) kalau perlu manipulasi, itu pun hati-hati.</p></div>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 7–8</div>
+      <div class="qz-sub">State &amp; provider.</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Kenapa <code>terraform.tfstate</code> tidak boleh di-commit ke Git?</div>
+        <button class="opt" data-correct="false">Karena ukurannya terlalu besar</button>
+        <button class="opt" data-correct="true">Karena bisa berisi data rahasia (password, key) dalam plain text</button>
+        <button class="opt" data-correct="false">Karena Git tidak mendukung file JSON</button>
+        <div class="explain">State sering memuat rahasia plain. Selain itu rawan konflik. Simpan di remote backend yang terenkripsi &amp; ber-locking.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Pengganti modern dari <code>terraform taint</code>?</div>
+        <button class="opt" data-correct="false">terraform destroy</button>
+        <button class="opt" data-correct="true">terraform apply -replace="..."</button>
+        <button class="opt" data-correct="false">terraform refresh</button>
+        <div class="explain"><code>taint</code> deprecated. Pakai flag <code>-replace</code> yang bisa di-preview lewat plan dulu.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">singkat</span>Apa itu "drift"?</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body">Kondisi saat infrastruktur nyata di AWS berbeda dari yang tercatat di state (mis. karena diubah manual lewat Console). Dideteksi via <code>plan</code> / <code>plan -refresh-only</code>.</div></details>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch8-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 9 : REMOTE BACKEND ============ -->
+<section id="c9"><div class="chapter" data-ch="9">
+  <div class="ch-head"><span class="ch-num">09</span><h2>Remote Backend dengan S3</h2><span class="est">~45 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <span class="tagline lab">🧪 Lab 2</span>
+    <p>Saatnya pindahin state dari laptop ke S3 biar aman &amp; bisa dishare tim.</p>
+
+    <div class="box sec"><span class="bt">UPDATE PENTING: locking sekarang pakai S3 native (bukan DynamoDB)</span><p>Dulu state locking di S3 backend butuh tabel <strong>DynamoDB</strong> terpisah. Sejak <strong>Terraform 1.10</strong> ada fitur <code>use_lockfile</code> (S3 native locking), dan sejak <strong>1.11</strong> fitur ini sudah <em>GA (stable)</em>. Akibatnya argumen <code>dynamodb_table</code> kini <strong>deprecated</strong> dan akan dihapus di versi minor mendatang. Karena kita pakai Terraform 1.14.x, <strong>kita pakai <code>use_lockfile = true</code></strong> dan tidak perlu DynamoDB lagi. Lebih murah, lebih sedikit IAM, lebih simpel.</p></div>
+
+    <h3>Langkah 1 — Siapkan bucket backend (sekali saja)</h3>
+    <p>Bucket buat nyimpen state idealnya dibikin terpisah (chicken-and-egg: backend butuh bucket, tapi bucket dibikin Terraform). Banyak tim bikin bucket ini via CLI manual / project bootstrap terpisah. Contoh via AWS CLI:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">bootstrap.sh</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">REGION=ap-southeast-1
+BUCKET=tfstate-belajar-$(openssl rand -hex 4)
+
+# buat bucket (di luar us-east-1 wajib LocationConstraint)
+aws s3api create-bucket \
+  --bucket "$BUCKET" --region "$REGION" \
+  --create-bucket-configuration LocationConstraint="$REGION"
+
+# versioning: WAJIB, biar bisa rollback state
+aws s3api put-bucket-versioning \
+  --bucket "$BUCKET" \
+  --versioning-configuration Status=Enabled
+
+# enkripsi default (SSE)
+aws s3api put-bucket-encryption --bucket "$BUCKET" \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+# blokir akses publik
+aws s3api put-public-access-block --bucket "$BUCKET" \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+echo "Backend bucket: $BUCKET"</code></pre></div>
+
+    <h3>Langkah 2 — Konfigurasi backend block</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">backend.tf — cara modern (1.10+)</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">terraform {
+  backend "s3" {
+    bucket       = "tfstate-belajar-xxxxxxxx"
+    key          = "terraform/aws-basic/terraform.tfstate"
+    region       = "ap-southeast-1"
+    encrypt      = true
+    use_lockfile = true   # &lt;- S3 NATIVE LOCKING (pengganti DynamoDB)
+  }
+}</code></pre></div>
+    <p>Saat di-apply, Terraform bikin file kunci kecil <code>...terraform.tfstate.tflock</code> di S3 selama operasi berlangsung, lalu hapus setelah selesai. Itu yang mencegah dua orang apply barengan.</p>
+
+    <div class="box info"><span class="bt">Kalau masih lihat tutorial DynamoDB?</span><p>Tutorial dengan <code>dynamodb_table</code> itu pra-1.10 dan masih bekerja (dengan warning deprecated). Untuk migrasi mulus, kamu boleh set <code>dynamodb_table</code> DAN <code>use_lockfile = true</code> bersamaan sementara, lalu lepas DynamoDB. Untuk project baru di 1.14.x, langsung <code>use_lockfile = true</code> saja.</p></div>
+
+    <h3>Kenapa backend block gak bisa pakai variable biasa?</h3>
+    <p>Backend dikonfigurasi <strong>sangat awal</strong> saat <code>init</code>, sebelum Terraform mengevaluasi variable/locals. Jadi nilai di blok <code>backend</code> harus literal. Solusinya: pakai <strong>backend config file</strong> atau flag <code>-backend-config</code>.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">backend-dev.hcl</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">bucket = "tfstate-belajar-xxxxxxxx"
+key    = "terraform/dev/terraform.tfstate"
+region = "ap-southeast-1"</code></pre></div>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform init -backend-config=backend-dev.hcl</code></pre></div>
+
+    <h3>Langkah 3 — Migrasi local state ke remote</h3>
+    <p>Kalau sebelumnya kamu udah punya state lokal, tambahkan backend block lalu:</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform init -migrate-state   # Terraform tawarin copy state lokal ke S3
+# ketik 'yes' saat ditanya</code></pre></div>
+    <p>Kalau cuma ubah konfigurasi backend yang sama (mis. nambah <code>use_lockfile</code>), pakai <code>terraform init -reconfigure</code>.</p>
+
+    <div class="box warn"><span class="bt">Jangan berbagi satu state untuk banyak environment</span><p>Pisahkan state per environment lewat <code>key</code> berbeda, mis. <code>terraform/dev/terraform.tfstate</code> vs <code>terraform/prod/terraform.tfstate</code>. Kalau dev &amp; prod nempel di satu state, salah <code>apply</code> dev bisa ngerusak prod. Lebih bagus lagi: bucket/akun terpisah untuk prod.</p></div>
+
+    <h3>IAM minimal buat backend (dengan locking)</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">iam-policy.json</span><button class="copy">copy</button></div>
+<pre><code class="lang-json">{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Effect": "Allow", "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::tfstate-belajar-xxxxxxxx" },
+    { "Effect": "Allow",
+      "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::tfstate-belajar-xxxxxxxx/terraform/*",
+        "arn:aws:s3:::tfstate-belajar-xxxxxxxx/terraform/*.tflock"
+      ] }
+  ]
+}</code></pre></div>
+    <p>Perhatikan: dengan <code>use_lockfile</code>, kamu butuh <code>s3:DeleteObject</code> juga (buat lepas lock <code>.tflock</code>). Policy yang cuma izinin baca/tulis state tapi lupa delete → locking gagal pas dijalankan.</p>
+
+    <div class="box clean"><span class="bt">Bersih-bersih Lab 2</span><p>Bucket backend biasanya dibiarkan (dipakai terus). Tapi kalau benar-benar selesai belajar: kosongkan dulu (termasuk semua <em>versions</em> karena versioning aktif), baru hapus bucket. Hati-hati — menghapus bucket state = kehilangan ingatan Terraform untuk infra yang masih hidup.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch9-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 10 : REAL AWS INFRA ============ -->
+<section id="c10"><div class="chapter" data-ch="10">
+  <div class="ch-head"><span class="ch-num">10</span><h2>Bikin Infrastruktur AWS Beneran</h2><span class="est">~70 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <span class="tagline lab">🧪 Lab 3 — paling seru</span>
+    <p>Sekarang kita rakit: VPC → subnet publik → internet gateway → route table → security group → EC2 yang otomatis nginstall Nginx. Akhirnya kita dapet IP publik buat dibuka di browser.</p>
+
+    <div class="box cost"><span class="bt">Catatan biaya Lab 3</span><p>EC2 <code>t3.micro</code> masuk free-tier (akun baru) atau sangat murah. <strong>Kita SENGAJA tidak pakai NAT Gateway</strong> (NAT itu mahal, ~per jam + per GB). Subnet publik + IGW sudah cukup untuk lab ini. Jangan lupa destroy.</p></div>
+
+    <h3>Struktur project (dipecah biar rapi)</h3>
+    <div class="tree"><span class="dir">terraform-aws-ec2-web/</span>
+├── versions.tf              <span class="cmt"># versi TF & provider</span>
+├── provider.tf              <span class="cmt"># konfigurasi provider</span>
+├── variables.tf             <span class="cmt"># input</span>
+├── locals.tf                <span class="cmt"># nilai turunan & tags</span>
+├── network.tf               <span class="cmt"># VPC, subnet, IGW, route</span>
+├── security.tf              <span class="cmt"># security group</span>
+├── compute.tf               <span class="cmt"># EC2 + user_data</span>
+├── outputs.tf               <span class="cmt"># IP / URL</span>
+└── terraform.tfvars.example <span class="cmt"># contoh isian variable</span></div>
+    <p>Kenapa dipecah? Biar gampang dibaca &amp; di-review. Terraform baca <em>semua</em> file <code>.tf</code> di folder sebagai satu kesatuan, jadi pembagian ini murni soal kerapian manusia.</p>
+
+    <h4>versions.tf &amp; provider.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">versions.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">terraform {
+  required_version = "&gt;= 1.10"
+  required_providers {
+    aws = { source = "hashicorp/aws", version = "~&gt; 6.0" }
+  }
+}</code></pre></div>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">provider.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  region = var.aws_region
+  default_tags { tags = local.common_tags }  # auto tag semua resource
+}</code></pre></div>
+    <div class="box tip"><span class="bt"><code>default_tags</code> itu enak banget</span><p>Daripada nempelin <code>tags</code> manual ke tiap resource, set sekali di provider — semua resource yang mendukung tag dapet tag itu otomatis.</p></div>
+
+    <h4>variables.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">variables.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "aws_region"    { type = string  default = "ap-southeast-1" }
+variable "project"       { type = string  default = "tf-web" }
+variable "env"           { type = string  default = "dev" }
+variable "vpc_cidr"      { type = string  default = "10.0.0.0/16" }
+variable "subnet_cidr"   { type = string  default = "10.0.1.0/24" }
+variable "instance_type" { type = string  default = "t3.micro" }
+
+# CIDR yang boleh SSH — JANGAN 0.0.0.0/0!
+variable "allowed_ssh_cidr" {
+  description = "IP kamu sendiri, format CIDR (mis. 103.x.x.x/32)"
+  type        = string
+}</code></pre></div>
+
+    <h4>locals.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">locals.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">locals {
+  name = "${var.project}-${var.env}"
+  common_tags = {
+    Project   = var.project
+    Env       = var.env
+    ManagedBy = "terraform"
+    Owner     = "belajar"
+  }
+}</code></pre></div>
+
+    <h4>network.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">network.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># pilih AZ pertama yang tersedia di region (lihat chapter Data Source)
+data "aws_availability_zones" "available" { state = "available" }
+
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = { Name = "${local.name}-vpc" }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.subnet_cidr
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = true
+  tags = { Name = "${local.name}-public" }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "${local.name}-igw" }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+  tags = { Name = "${local.name}-rt-public" }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}</code></pre></div>
+
+    <h4>security.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">security.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_security_group" "web" {
+  name        = "${local.name}-sg"
+  description = "Allow HTTP from anywhere, SSH from my IP only"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]      # web publik: wajar
+  }
+
+  ingress {
+    description = "SSH dari IP saya saja"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]  # BUKAN 0.0.0.0/0!
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${local.name}-sg" }
+}</code></pre></div>
+
+    <h4>compute.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">compute.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+}
+
+resource "aws_instance" "web" {
+  ami                    = data.aws_ami.al2023.id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.web.id]
+
+  user_data = &lt;&lt;-EOT
+    #!/bin/bash
+    dnf -y update
+    dnf -y install nginx
+    echo "&lt;h1&gt;Halo dari Terraform x AWS 🚀&lt;/h1&gt;" &gt; /usr/share/nginx/html/index.html
+    systemctl enable --now nginx
+  EOT
+
+  tags = { Name = "${local.name}-web" }
+}</code></pre></div>
+    <div class="box info"><span class="bt">Soal SSH key pair (opsional)</span><p>Lab ini gak butuh SSH karena Nginx dipasang lewat <code>user_data</code>. Kalau mau SSH, tambah <code>key_name = "nama-keypair"</code>. Tapi di dunia nyata, <strong>lebih baik pakai SSM Session Manager</strong> (lihat box keamanan di bawah) daripada buka port 22.</p></div>
+
+    <h4>outputs.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">outputs.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">output "public_ip" { value = aws_instance.web.public_ip }
+output "web_url"   { value = "http://${aws_instance.web.public_ip}" }</code></pre></div>
+
+    <h4>terraform.tfvars.example</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terraform.tfvars.example</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># salin jadi terraform.tfvars lalu isi IP kamu
+aws_region       = "ap-southeast-1"
+allowed_ssh_cidr = "103.0.113.7/32"   # cek IP publikmu: curl ifconfig.me</code></pre></div>
+
+    <h3>Jalankan</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">cp terraform.tfvars.example terraform.tfvars   # lalu edit IP-mu
+terraform init
+terraform fmt &amp;&amp; terraform validate
+terraform plan      # harusnya banyak "+ to add"
+terraform apply
+# buka output web_url di browser (tunggu ~1-2 menit user_data selesai)</code></pre></div>
+
+    <div class="box sec"><span class="bt">Security best practice di lab ini</span>
+      <ul style="margin:6px 0 0">
+        <li>SSH <strong>tidak</strong> dibuka ke <code>0.0.0.0/0</code> — hanya IP kamu (lewat variable).</li>
+        <li>Di produksi: <strong>pilih SSM Session Manager</strong> daripada SSH (gak perlu buka port 22, gak perlu key, ada audit log).</li>
+        <li><strong>Least privilege</strong>: IAM role instance hanya kasih izin yang perlu.</li>
+        <li><strong>Tagging</strong> konsisten (Owner, Env) buat tracking biaya &amp; kepemilikan.</li>
+        <li>EC2 publik hanya kalau memang perlu diakses dari internet. Backend/database → subnet privat.</li>
+      </ul>
+    </div>
+
+    <div class="box clean"><span class="bt">Bersih-bersih Lab 3 (WAJIB — ada EC2!)</span><p><code>terraform destroy</code> menghapus: EC2, security group, route table + association, IGW, subnet, VPC. Pastikan <em>0 to add, ... to destroy</em> dan tidak ada resource nyangkut. Cek juga <strong>Elastic IP</strong> kalau kamu sempat bikin (EIP nganggur itu berbayar).</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch10-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 11 : DATA SOURCES ============ -->
+<section id="c11"><div class="chapter" data-ch="11">
+  <div class="ch-head"><span class="ch-num">11</span><h2>Data Sources — Baca yang Sudah Ada</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Kalau <strong>resource</strong> = "bikin/kelola sesuatu", maka <strong>data source</strong> = "baca info sesuatu yang sudah ada". Read-only, tidak mengubah apa pun.</p>
+
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>resource</th><th>data source</th></tr>
+      <tr><td>Aksi</td><td>create / update / delete</td><td>read saja</td></tr>
+      <tr><td>Ngubah AWS?</td><td>Ya</td><td>Tidak</td></tr>
+      <tr><td>Contoh</td><td><code>aws_instance</code></td><td><code>data.aws_ami</code></td></tr>
+    </table></div>
+
+    <h3>Contoh praktis</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">data.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># AMI Amazon Linux 2023 terbaru
+data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter { name = "name"  values = ["al2023-ami-*-x86_64"] }
+}
+
+# VPC default yang sudah ada di akun
+data "aws_vpc" "default" { default = true }
+
+# siapa saya (account id, arn)
+data "aws_caller_identity" "current" {}
+
+# daftar AZ tersedia di region aktif
+data "aws_availability_zones" "azs" { state = "available" }
+
+# dipakai:
+# data.aws_ami.al2023.id
+# data.aws_caller_identity.current.account_id
+# data.aws_availability_zones.azs.names[0]</code></pre></div>
+
+    <div class="box warn"><span class="bt">"AMI terbaru" itu pisau bermata dua</span><p><code>most_recent = true</code> enak: selalu dapet AMI ter-update. Tapi kalau AWS rilis AMI baru, <code>plan</code> berikutnya bisa nge-detect perubahan AMI → mau <strong>replace EC2 kamu</strong> (downtime!). Untuk produksi yang butuh stabil, pertimbangkan pin AMI ID eksplisit atau pakai <code>ignore_changes = [ami]</code> (lihat chapter Lifecycle).</p></div>
+
+    <span class="tagline ex">✎ Mini exercise</span>
+    <p>Tambah output yang nampilin Account ID kamu pakai <code>data.aws_caller_identity</code>. Verifikasi cocok dengan <code>aws sts get-caller-identity</code>.</p>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch11-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 12 : DEPENDENCIES ============ -->
+<section id="c12"><div class="chapter" data-ch="12">
+  <div class="ch-head"><span class="ch-num">12</span><h2>Dependencies &amp; Graph</h2><span class="est">~20 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Terraform membangun <strong>dependency graph</strong> otomatis lalu mengeksekusi resource dengan urutan benar (yang independen bisa paralel).</p>
+
+    <h3>Implicit dependency (paling umum)</h3>
+    <p>Kalau resource A merujuk atribut resource B, Terraform <em>otomatis</em> tahu B harus jadi dulu.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">implicit.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_vpc" "main" { cidr_block = "10.0.0.0/16" }
+
+resource "aws_subnet" "a" {
+  vpc_id     = aws_vpc.main.id   # &lt;- referensi ini = dependency otomatis
+  cidr_block = "10.0.1.0/24"
+}</code></pre></div>
+    <p>Karena <code>aws_subnet.a</code> menyebut <code>aws_vpc.main.id</code>, Terraform tahu VPC dibuat dulu. Kamu gak perlu nulis apa-apa tambahan.</p>
+
+    <h3>Explicit dependency: <code>depends_on</code></h3>
+    <p>Kadang ada ketergantungan yang <em>tidak</em> terlihat lewat atribut (mis. IAM policy harus aktif sebelum suatu aksi). Di situ pakai <code>depends_on</code>.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">explicit.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "app" {
+  # ...
+  depends_on = [aws_iam_role_policy.app_policy]  # pastikan policy ready dulu
+}</code></pre></div>
+    <div class="box tip"><span class="bt">Jangan obral <code>depends_on</code></span><p>90% kasus, implicit dependency sudah cukup. Pakai <code>depends_on</code> hanya saat benar-benar perlu — kebanyakan <code>depends_on</code> bikin graph lambat &amp; kaku.</p></div>
+
+    <h3>Melihat graph</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform graph | dot -Tsvg &gt; graph.svg   # butuh graphviz (dot)</code></pre></div>
+
+    <div class="box danger"><span class="bt">Dependency cycle</span><p>Kalau A butuh B dan B butuh A → <code>Error: Cycle</code>. Biasanya karena referensi melingkar atau <code>depends_on</code> yang salah. Solusi: putus salah satu arah ketergantungan, atau pecah resource.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch12-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 13 : LIFECYCLE ============ -->
+<section id="c13"><div class="chapter" data-ch="13">
+  <div class="ch-head"><span class="ch-num">13</span><h2>Lifecycle Rules</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Blok <code>lifecycle</code> mengatur <em>cara</em> Terraform memperlakukan resource saat update/replace.</p>
+
+    <h3><code>create_before_destroy</code></h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">cbd.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "web" {
+  # ...
+  lifecycle {
+    create_before_destroy = true   # bikin pengganti dulu, baru hapus lama
+  }
+}</code></pre></div>
+    <p>Default Terraform: hapus dulu, baru bikin (bisa downtime). Dengan ini: bikin yang baru dulu → tukar → baru hapus lama. Bagus buat zero-downtime replace.</p>
+
+    <h3><code>prevent_destroy</code> — rem darurat</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">prevent.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_s3_bucket" "important_data" {
+  bucket = "data-penting-perusahaan"
+  lifecycle {
+    prevent_destroy = true   # Terraform NOLAK kalau ada rencana hapus ini
+  }
+}</code></pre></div>
+    <p>Cocok buat bucket data penting / database produksi. Kalau ada <code>destroy</code> yang menyentuh resource ini, Terraform gagal dengan error — penjaga dari kecelakaan.</p>
+
+    <h3><code>ignore_changes</code></h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">ignore.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "web" {
+  # ...
+  lifecycle {
+    ignore_changes = [
+      ami,                    # jangan replace cuma karena AMI baru
+      tags["LastScanned"],    # tag yang diubah tool lain di luar TF
+    ]
+  }
+}</code></pre></div>
+
+    <h3><code>replace_triggered_by</code></h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">replace-trigger.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "web" {
+  # ...
+  lifecycle {
+    replace_triggered_by = [aws_launch_template.web.latest_version]
+  }
+}</code></pre></div>
+    <p>Memaksa replace resource ini saat resource/atribut lain berubah — berguna saat ketergantungan tidak otomatis memicu replace.</p>
+
+    <div class="box warn"><span class="bt">Jangan salah pakai</span><p><code>ignore_changes</code> yang berlebihan bikin kode &amp; realita "diam-diam" beda (kamu sengaja buta terhadap drift). <code>prevent_destroy</code> bisa bikin <code>destroy</code> seluruh stack gagal di tengah jalan. Pakai dengan sadar, dokumentasikan alasannya.</p></div>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 9–13</div>
+      <div class="qz-sub">Backend, data source, dependency, lifecycle.</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Mekanisme locking S3 backend yang direkomendasikan di Terraform 1.14.x?</div>
+        <button class="opt" data-correct="false">Tabel DynamoDB via <code>dynamodb_table</code></button>
+        <button class="opt" data-correct="true">S3 native locking via <code>use_lockfile = true</code></button>
+        <button class="opt" data-correct="false">Tidak perlu locking sama sekali</button>
+        <div class="explain"><code>use_lockfile</code> (GA sejak 1.11) menggantikan DynamoDB, yang kini deprecated.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Apa risiko <code>most_recent = true</code> pada <code>data "aws_ami"</code>?</div>
+        <button class="opt" data-correct="false">AMI jadi tidak bisa dipakai</button>
+        <button class="opt" data-correct="true">AMI baru bisa memicu replace EC2 (potensi downtime)</button>
+        <button class="opt" data-correct="false">Tagihan AWS otomatis naik</button>
+        <div class="explain">Karena AMI bisa berubah, plan berikutnya mungkin ingin mengganti instance. Atasi dengan pin AMI atau <code>ignore_changes</code>.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">true/false</span>Backend block bisa membaca <code>var.*</code> seperti argumen biasa.</div>
+        <button class="opt" data-correct="false">True</button>
+        <button class="opt" data-correct="true">False</button>
+        <div class="explain">Backend dievaluasi sangat awal (saat init), sebelum variable. Gunakan <code>-backend-config</code> / file backend.</div>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch13-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 14 : WORKSPACES ============ -->
+<section id="c14"><div class="chapter" data-ch="14">
+  <div class="ch-head"><span class="ch-num">14</span><h2>Workspaces &amp; Strategi Environment</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p><strong>Workspace</strong> = beberapa "salinan state" terpisah dalam satu konfigurasi yang sama. Ada workspace <code>default</code> sejak awal.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">terraform workspace list           # lihat semua workspace
+terraform workspace new dev        # bikin workspace dev
+terraform workspace select dev     # pindah ke dev
+terraform workspace show           # workspace aktif sekarang
+# di kode: terraform.workspace -&gt; "dev"</code></pre></div>
+
+    <h3>Dua pendekatan environment</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>Opsi A: folder terpisah</th><th>Opsi B: workspace</th></tr>
+      <tr><td>Struktur</td><td><code>environments/dev,staging,prod</code></td><td>satu folder, banyak workspace</td></tr>
+      <tr><td>Isolasi state</td><td>Sangat jelas (file/key beda)</td><td>Otomatis per workspace</td></tr>
+      <tr><td>Beda config antar-env</td><td>Mudah &amp; eksplisit</td><td>Pakai <code>if terraform.workspace</code> (rawan)</td></tr>
+      <tr><td>Risiko salah env</td><td>Rendah (folder beda)</td><td>Lebih tinggi (lupa <code>select</code>)</td></tr>
+      <tr><td>Cocok untuk</td><td>dev/staging/prod beneran</td><td>varian sementara / ephemeral</td></tr>
+    </table></div>
+    <div class="tree"><span class="cmt"># Opsi A — direkomendasikan untuk dev/staging/prod</span>
+<span class="dir">environments/</span>
+├── <span class="dir">dev/</span>     main.tf  backend.tf  dev.tfvars
+├── <span class="dir">staging/</span> main.tf  backend.tf  staging.tfvars
+└── <span class="dir">prod/</span>    main.tf  backend.tf  prod.tfvars</div>
+
+    <div class="box tip"><span class="bt">Rekomendasi buat kamu (beginner→intermediate)</span><p>Untuk dev/staging/prod yang serius, <strong>pakai folder + state terpisah (Opsi A)</strong> — lebih jelas, aman, dan susah salah. <em>Pahami</em> workspace (sering muncul di interview &amp; tutorial), tapi <strong>jangan over-pakai</strong> buat memisahkan environment besar. Workspace lebih pas untuk varian ephemeral (mis. preview per-branch).</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch14-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 15 : MODULES ============ -->
+<section id="c15"><div class="chapter" data-ch="15">
+  <div class="ch-head"><span class="ch-num">15</span><h2>Modules — Komponen Reusable</h2><span class="est">~50 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <span class="tagline lab">🧪 Lab 4</span>
+    <p>Module itu kayak <strong>fungsi</strong> di pemrograman: bungkus sekumpulan resource jadi satu unit reusable dengan input (variables) &amp; output.</p>
+
+    <div class="analogy">Bayangin resep "EC2 web server". Daripada nulis ulang VPC+SG+EC2 tiap project, kamu jadiin <strong>module</strong>. Project lain tinggal "panggil" module itu sambil isi parameter (region, instance type). Sekali bikin bagus, dipakai di mana-mana.</div>
+
+    <h3>Root module vs Child module</h3>
+    <ul>
+      <li><strong>Root module</strong> = folder tempat kamu jalanin <code>terraform apply</code>.</li>
+      <li><strong>Child module</strong> = module yang "dipanggil" dari root (lokal atau remote).</li>
+    </ul>
+
+    <h3>Struktur Lab 4</h3>
+    <div class="tree"><span class="dir">terraform-modules-demo/</span>
+├── main.tf           <span class="cmt"># root: panggil module</span>
+├── variables.tf
+├── outputs.tf
+└── <span class="dir">modules/</span>
+    └── <span class="dir">ec2-web/</span>      <span class="cmt"># child module reusable</span>
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf</div>
+
+    <h4>modules/ec2-web/variables.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/variables.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "name"          { type = string }
+variable "subnet_id"     { type = string }
+variable "sg_ids"        { type = list(string) }
+variable "instance_type" { type = string  default = "t3.micro" }
+variable "tags"          { type = map(string)  default = {} }</code></pre></div>
+
+    <h4>modules/ec2-web/main.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/main.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter { name = "name"  values = ["al2023-ami-*-x86_64"] }
+}
+
+resource "aws_instance" "this" {
+  ami                    = data.aws_ami.al2023.id
+  instance_type          = var.instance_type
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = var.sg_ids
+  tags                   = merge(var.tags, { Name = var.name })
+}</code></pre></div>
+
+    <h4>modules/ec2-web/outputs.tf</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/outputs.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">output "instance_id" { value = aws_instance.this.id }
+output "public_ip"   { value = aws_instance.this.public_ip }</code></pre></div>
+
+    <h4>main.tf (root) — memanggil module</h4>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">main.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">module "web1" {
+  source        = "./modules/ec2-web"   # module lokal
+  name          = "web-1"
+  subnet_id     = aws_subnet.public.id
+  sg_ids        = [aws_security_group.web.id]
+  instance_type = "t3.micro"
+  tags          = local.common_tags
+}
+
+output "web1_ip" { value = module.web1.public_ip }</code></pre></div>
+    <p>Setelah nambah/ubah <code>source</code> module, jalankan <code>terraform init</code> lagi (Terraform perlu "memuat" module).</p>
+
+    <h3>Remote module &amp; versioning</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">remote-module.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"  # dari Terraform Registry
+  version = "~&gt; 5.0"                          # PIN versi module juga!
+  # ... input module
+}</code></pre></div>
+    <div class="box sec"><span class="bt">Selalu pin versi module remote</span><p>Sama seperti provider: tanpa pin, module bisa berubah dan bikin plan kamu beda. <code>version = "~&gt; 5.0"</code> melindungi dari breaking change.</p></div>
+
+    <h3>Desain module: bagus vs jelek</h3>
+    <div class="tbl-wrap"><table>
+      <tr><th>Bagus 👍</th><th>Jelek 👎</th></tr>
+      <tr><td>Input/output jelas &amp; sedikit</td><td>Puluhan variable membingungkan</td></tr>
+      <tr><td>Satu tanggung jawab (mis. "ec2-web")</td><td>Module raksasa serba-bisa</td></tr>
+      <tr><td>Ada README + contoh</td><td>Tanpa dokumentasi</td></tr>
+      <tr><td>Default masuk akal</td><td>Semua wajib diisi</td></tr>
+      <tr><td>Dibuat saat sudah ada pola berulang</td><td>Over-engineer dari awal</td></tr>
+    </table></div>
+    <div class="box warn"><span class="bt">Jangan over-engineer module terlalu dini</span><p>Pemula sering tergoda bikin "module super generik" sejak hari pertama. Mahal &amp; ribet. Tulis konkret dulu; setelah pola berulang 2–3 kali, baru ekstrak jadi module. Penamaan: deskriptif &amp; konsisten (<code>ec2-web</code>, <code>vpc-simple</code>).</p></div>
+
+    <div class="box clean"><span class="bt">Bersih-bersih Lab 4</span><p>Kalau lab ini bikin EC2 sungguhan, <code>terraform destroy</code> seperti biasa.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch15-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 16 : PROJECT STRUCTURE ============ -->
+<section id="c16"><div class="chapter" data-ch="16">
+  <div class="ch-head"><span class="ch-num">16</span><h2>Struktur Project — Best Practice</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <h3>Project kecil</h3>
+    <div class="tree"><span class="dir">project/</span>  main.tf  variables.tf  outputs.tf  versions.tf</div>
+    <h3>Project medium (pecah per domain)</h3>
+    <div class="tree"><span class="dir">project/</span>
+  provider.tf  versions.tf  variables.tf  locals.tf
+  network.tf   security.tf  compute.tf    outputs.tf</div>
+    <h3>Multi-environment</h3>
+    <div class="tree"><span class="dir">infra/</span>
+├── <span class="dir">modules/</span>          <span class="cmt"># module reusable</span>
+│   ├── <span class="dir">vpc/</span>
+│   └── <span class="dir">ec2-web/</span>
+└── <span class="dir">environments/</span>
+    ├── <span class="dir">dev/</span>      main.tf backend.tf dev.tfvars
+    ├── <span class="dir">staging/</span>
+    └── <span class="dir">prod/</span></div>
+
+    <h3>Aturan main</h3>
+    <ul>
+      <li><strong>Jangan</strong> taruh semua di satu <code>main.tf</code> raksasa — susah baca &amp; review.</li>
+      <li><strong>Naming convention</strong>: pakai pola <code>${project}-${env}-${role}</code> yang konsisten.</li>
+      <li><strong>Tagging convention</strong>: minimal <code>Project</code>, <code>Env</code>, <code>Owner</code>, <code>ManagedBy=terraform</code> (pakai <code>default_tags</code>).</li>
+      <li><code>variables.tf</code> = <em>definisi</em> variable; <code>terraform.tfvars</code> = <em>nilai</em>-nya.</li>
+      <li>Sediakan <code>terraform.tfvars.example</code> (aman, tanpa rahasia) buat panduan tim.</li>
+      <li><code>README.md</code> wajib: cara run, prasyarat, daftar variable, cara destroy.</li>
+      <li><code>.gitignore</code> Terraform yang benar (lihat chapter State).</li>
+    </ul>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch16-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 17 : SECURITY ============ -->
+<section id="c17"><div class="chapter" data-ch="17">
+  <div class="ch-head"><span class="ch-num">17</span><h2>Security Best Practices (DevSecOps)</h2><span class="est">~45 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p class="lead">Bagian inti buat mindset DevSecOps. Infra aman itu hasil kebiasaan, bukan kebetulan.</p>
+
+    <h3>Checklist keamanan IaC di AWS</h3>
+    <ul>
+      <li><strong>Jangan pernah commit secret</strong> — tidak ke kode, tidak ke tfvars yang ke-push.</li>
+      <li><strong>Jangan commit <code>terraform.tfstate</code></strong> — bisa berisi rahasia plain.</li>
+      <li><strong>Enkripsi backend</strong> S3 (<code>encrypt = true</code>) + aktifkan <strong>versioning</strong>.</li>
+      <li><strong>Batasi akses bucket backend</strong> (IAM least-privilege, block public access).</li>
+      <li><strong>IAM least privilege</strong> — kasih izin seperlunya, bukan <code>*</code>.</li>
+      <li><strong>Kredensial sementara</strong>: IAM Role / AWS SSO / OIDC &gt; access key statis.</li>
+      <li><strong>Hindari long-lived access key</strong> — kalau terpaksa, rotasi berkala.</li>
+      <li><strong>Pin versi</strong> Terraform, provider, dan module.</li>
+      <li><strong>Selalu <code>fmt</code> + <code>validate</code></strong>, dan <strong>review <code>plan</code></strong> sebelum apply.</li>
+      <li><strong>Pisahkan state</strong> dev/staging/prod.</li>
+      <li><strong>Tagging</strong> buat ownership &amp; cost tracking.</li>
+      <li><strong>Secret di tempat yang benar</strong>: AWS Secrets Manager / SSM Parameter Store (bukan di kode).</li>
+    </ul>
+
+    <h3>Static analysis — scan kode sebelum apply</h3>
+    <p>Pasang scanner IaC di lokal &amp; CI buat nangkep misconfiguration (bucket publik, SG <code>0.0.0.0/0</code>, dll):</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">checkov -d .          # Checkov (Bridgecrew/Prisma) — policy bawaan banyak
+trivy config .        # Trivy config scan (penerus tfsec)
+# tfsec masih dipakai, tapi sebagian fungsinya kini dilebur ke Trivy</code></pre></div>
+
+    <h3>Policy as Code</h3>
+    <ul>
+      <li><strong>OPA / Conftest</strong> — tulis policy (Rego) buat cek plan/HCL di CI. Open-source, vendor-neutral.</li>
+      <li><strong>Checkov custom policy</strong> — tambah aturan organisasi kamu sendiri.</li>
+      <li><strong>Sentinel</strong> — policy framework HashiCorp (di HCP Terraform / Terraform Enterprise).</li>
+    </ul>
+
+    <h3>Secret management yang benar</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">secrets.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># Ambil secret saat runtime dari SSM Parameter Store (bukan hardcode)
+data "aws_ssm_parameter" "db_password" {
+  name            = "/myapp/prod/db_password"
+  with_decryption = true
+}
+# pakai: data.aws_ssm_parameter.db_password.value
+# CATATAN: nilainya TETAP masuk ke state. Lihat box di bawah.</code></pre></div>
+
+    <div class="box danger"><span class="bt">Kenapa <code>sensitive = true</code> bukan berarti secret aman 100%?</span>
+      <p><code>sensitive = true</code> cuma melakukan <strong>satu hal</strong>: menyembunyikan nilai dari <em>tampilan</em> output CLI &amp; log. Yang TIDAK ia lakukan:</p>
+      <ul style="margin:6px 0">
+        <li>Nilai <strong>tetap tersimpan plain text di state file</strong>. Siapa pun yang baca state = baca secret.</li>
+        <li>Nilai bisa muncul di <strong>plan file</strong> (<code>tfplan</code>) yang kadang di-upload ke artifact CI.</li>
+        <li>Tidak mengenkripsi apa pun di sumbernya.</li>
+      </ul>
+      <p style="margin-bottom:0"><strong>Cara aman:</strong> simpan secret di Secrets Manager/SSM, batasi akses ke <em>state bucket</em> seketat akses ke database, enkripsi state (<code>encrypt = true</code> + KMS), jangan upload plan file mentah ke artifact publik, dan minimalkan secret yang lewat Terraform sama sekali (mis. biar aplikasi ambil secret sendiri saat runtime via IAM role).</p>
+    </div>
+
+    <h3>CI/CD security (sekilas, detail di chapter berikut)</h3>
+    <ul>
+      <li>Pakai <strong>OIDC</strong> dari CI ke AWS (kredensial sementara) — bukan menyimpan access key statis sebagai secret CI.</li>
+      <li><strong>Branch protection</strong> + <strong>manual approval</strong> sebelum apply ke prod.</li>
+      <li>Jalankan scanner (Checkov/Trivy) sebagai gate di pipeline.</li>
+      <li>Jangan log <code>plan</code> verbose yang membocorkan nilai sensitif.</li>
+    </ul>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 14–17</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Untuk memisahkan dev/staging/prod yang serius, mana yang umumnya lebih disarankan?</div>
+        <button class="opt" data-correct="true">Folder + state terpisah per environment</button>
+        <button class="opt" data-correct="false">Satu workspace untuk semuanya</button>
+        <button class="opt" data-correct="false">Satu state untuk semua env biar simpel</button>
+        <div class="explain">Folder/state terpisah = isolasi jelas, minim risiko salah env.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Apa yang benar tentang <code>sensitive = true</code>?</div>
+        <button class="opt" data-correct="false">Mengenkripsi nilai di state</button>
+        <button class="opt" data-correct="true">Hanya menyembunyikan nilai dari tampilan CLI; nilai tetap plain di state</button>
+        <button class="opt" data-correct="false">Mencegah secret masuk ke state</button>
+        <div class="explain">Itu sebabnya akses ke state harus dijaga seketat akses ke secret itu sendiri.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">singkat</span>Sebut dua tool static analysis untuk IaC.</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body">Checkov dan Trivy (config scan). tfsec juga masih dipakai; OPA/Conftest untuk policy as code custom.</div></details>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch17-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 18 : GIT + GITHUB ACTIONS ============ -->
+<section id="c18"><div class="chapter" data-ch="18">
+  <div class="ch-head"><span class="ch-num">18</span><h2>Terraform + Git + GitHub Actions</h2><span class="est">~40 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>IaC tanpa version control itu setengah jadi. Pola GitOps standar: perubahan infra lewat <strong>Pull Request</strong>, <code>plan</code> jalan otomatis di PR, <code>apply</code> baru setelah di-approve.</p>
+
+    <h3>Alur PR yang sehat</h3>
+    <ol>
+      <li>Buat branch → ubah <code>.tf</code> → push → buka PR.</li>
+      <li>CI jalanin <code>fmt -check</code>, <code>init</code>, <code>validate</code>, <code>plan</code> → hasil plan ditempel di PR.</li>
+      <li>Reviewer baca diff &amp; plan → approve.</li>
+      <li><code>apply</code> jalan (idealnya butuh <strong>manual approval</strong>, apalagi untuk prod).</li>
+    </ol>
+    <div class="box danger"><span class="bt">Auto-apply ke produksi itu bahaya</span><p>Jangan auto-<code>apply</code> begitu merge ke prod tanpa gerbang. Satu PR keliru bisa hapus resource. Selalu ada <strong>manual approval</strong> + <strong>branch protection</strong> untuk prod.</p></div>
+
+    <h3>Autentikasi ke AWS: pakai OIDC (bukan access key statis)</h3>
+    <div class="box sec"><span class="bt">OIDC &gt; AWS_ACCESS_KEY_ID di GitHub Secrets</span><p>Daripada simpan <code>AWS_ACCESS_KEY_ID</code>/<code>AWS_SECRET_ACCESS_KEY</code> sebagai GitHub Secret (statis, rawan bocor, ribet rotasi), pakai <strong>GitHub OIDC</strong>: workflow "menukar" token identitas GitHub dengan kredensial AWS <em>sementara</em> via <code>sts:AssumeRoleWithWebIdentity</code>. Tidak ada secret jangka panjang yang disimpan.</p></div>
+
+    <h3>Workflow: plan otomatis di PR</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">.github/workflows/terraform-plan.yml</span><button class="copy">copy</button></div>
+<pre><code class="lang-yaml">name: terraform-plan
+on:
+  pull_request:
+    paths: ["**.tf", "**.tfvars"]
+
+permissions:
+  id-token: write     # WAJIB untuk OIDC
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/gha-terraform
+          aws-region: ap-southeast-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.6
+
+      - run: terraform fmt -check
+      - run: terraform init
+      - run: terraform validate
+      - run: terraform plan -no-color -input=false</code></pre></div>
+
+    <h3>Workflow apply dengan manual approval (opsional)</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">.github/workflows/terraform-apply.yml</span><button class="copy">copy</button></div>
+<pre><code class="lang-yaml">name: terraform-apply
+on:
+  push:
+    branches: ["main"]
+permissions: { id-token: write, contents: read }
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: production   # &lt;- aktifkan "required reviewers" di GitHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/gha-terraform
+          aws-region: ap-southeast-1
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.14.6 }
+      - run: terraform init
+      - run: terraform apply -auto-approve -input=false</code></pre></div>
+    <p>Kunci keamanannya ada di <code>environment: production</code> + setting "required reviewers" di GitHub → job <em>pause</em> sampai ada yang approve manual. <code>-auto-approve</code> aman di sini karena gerbang manusianya ada di GitHub.</p>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch18-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 19 : DEBUGGING & TROUBLESHOOTING ============ -->
+<section id="c19"><div class="chapter" data-ch="19">
+  <div class="ch-head"><span class="ch-num">19</span><h2>Debugging &amp; Troubleshooting</h2><span class="est">~35 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Error itu normal — bahkan engineer senior ketemu error tiap hari. Yang membedakan: kemampuan <em>baca pesan error</em> dengan tenang. Terraform biasanya kasih pesan yang cukup jelas. Di bawah ini katalog error yang paling sering muncul pas belajar AWS, lengkap dengan arti, penyebab, cara fix, dan cara mencegah.</p>
+
+    <div class="box tip"><span class="bt">Senjata debugging</span><p>Set <code>export TF_LOG=DEBUG</code> (atau <code>TRACE</code>) untuk log super detail, dan <code>export TF_LOG_PATH=tf.log</code> biar tersimpan ke file. Matikan lagi dengan <code>unset TF_LOG</code> kalau sudah selesai — log-nya berisik banget.</p></div>
+
+    <div class="tagline ex">📋 Katalog Error</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Error</th><th>Arti &amp; Penyebab</th><th>Cara Fix</th><th>Cara Cegah</th></tr></thead>
+      <tbody>
+        <tr><td><code>No valid credential sources found</code> / Provider auth failed</td><td>Terraform gak nemu kredensial AWS. Profile salah, <code>AWS_PROFILE</code> belum di-set, atau SSO session expired.</td><td>Cek <code>aws sts get-caller-identity</code>. Set profile yang benar: <code>export AWS_PROFILE=belajar</code>. Kalau SSO: <code>aws sso login</code>.</td><td>Standarisasi cara auth (profile/SSO), dokumentasikan di README.</td></tr>
+        <tr><td><code>AccessDenied</code> / <code>UnauthorizedOperation</code></td><td>Kredensial valid, tapi IAM-nya gak punya izin untuk aksi itu (mis. <code>ec2:RunInstances</code>).</td><td>Baca action &amp; resource yang disebut di pesan, tambahkan ke IAM policy. Atau pakai user/role yang izinnya cukup.</td><td>Least privilege yang <em>cukup</em>. Saat belajar, policy agak lega; di prod, pertajam pelan-pelan.</td></tr>
+        <tr><td><code>InvalidClientTokenId</code></td><td>Access key sudah dihapus/di-disable, atau salah ketik. Sering juga karena region tidak mendukung endpoint.</td><td>Buat ulang access key / login SSO ulang. Pastikan key aktif di IAM.</td><td>Hindari long-lived keys. Pakai SSO / role sementara.</td></tr>
+        <tr><td><code>BucketAlreadyExists</code> / <code>BucketAlreadyOwnedByYou</code></td><td>Nama S3 bucket itu <strong>global unik</strong> seluruh AWS. Nama yang kamu pilih sudah dipakai orang/akun lain.</td><td>Tambah suffix acak (<code>random_id</code>) atau pakai prefix unik akun.</td><td>Selalu pakai suffix unik untuk bucket name sejak awal (lihat Lab 1).</td></tr>
+        <tr><td><code>Error acquiring the state lock</code></td><td>Ada proses lain yang lagi pegang lock state (apply barengan), atau apply sebelumnya crash dan lock-nya nyangkut.</td><td>Tunggu proses lain selesai. Kalau yakin nyangkut: <code>terraform force-unlock &lt;LOCK_ID&gt;</code> (hati-hati, baca dulu siapa yang pegang).</td><td>Jangan apply barengan dari banyak orang. Pakai CI sebagai satu-satunya yang apply.</td></tr>
+        <tr><td><code>Cycle: ...</code> (Dependency cycle)</td><td>Dua resource saling bergantung (A butuh B, B butuh A). Graph-nya muter.</td><td>Pecah ketergantungan: pakai <code>locals</code>/<code>data</code>, atau hapus <code>depends_on</code> yang gak perlu.</td><td>Andalkan dependency implisit; pakai <code>depends_on</code> seperlunya.</td></tr>
+        <tr><td><code>resource already exists</code> / <code>...EntityAlreadyExists</code></td><td>Resource-nya sudah ada di AWS (dibuat manual / di-apply di luar state ini) tapi belum ada di state Terraform.</td><td><code>import</code> resource itu ke state (pakai blok <code>import {}</code>), atau hapus resource manual lalu apply lagi.</td><td>Jangan campur bikin manual + Terraform untuk resource yang sama.</td></tr>
+        <tr><td><code>timeout while waiting for state to become...</code></td><td>AWS lama merespons / resource gak kunjung "ready" (mis. EC2 stuck, NAT GW lama).</td><td>Coba <code>apply</code> lagi (sering self-heal). Cek di Console apakah resource-nya error. Naikkan <code>timeouts {}</code> kalau memang wajar lama.</td><td>Pilih resource yang ringan untuk belajar; cek service health AWS.</td></tr>
+        <tr><td><code>InvalidAMIID.NotFound</code></td><td>AMI ID gak ada di region itu. AMI itu <strong>per-region</strong> — ID di Singapore beda dengan di Jakarta.</td><td>Jangan hardcode AMI ID. Pakai <code>data "aws_ami"</code> dengan filter owner/nama (lihat Ch.11).</td><td>Selalu ambil AMI via data source, bukan tempel ID manual.</td></tr>
+        <tr><td>Security group rule conflict / <code>Duplicate</code></td><td>Rule yang sama didefinisikan dua kali (mis. inline rules + <code>aws_security_group_rule</code> bareng).</td><td>Pilih salah satu gaya: inline <em>atau</em> resource rule terpisah. Jangan dicampur.</td><td>Konsisten satu gaya SG rules per security group.</td></tr>
+        <tr><td>Region mismatch</td><td>Resource dibuat di region X, tapi kamu cari/ubah di region Y. Atau backend beda region dengan provider.</td><td>Samakan <code>region</code> di provider, backend, dan AWS CLI default.</td><td>Set region eksplisit via variable; jangan andalkan default tersembunyi.</td></tr>
+        <tr><td>State drift</td><td>Infra nyata diubah manual lewat Console → beda dengan state.</td><td><code>terraform plan</code> akan nunjukin selisihnya. Putuskan: apply (kembalikan ke kode) atau update kode mengikuti realita.</td><td>Larang perubahan manual di resource yang dikelola Terraform.</td></tr>
+        <tr><td>Backend migration error (<code>Backend configuration changed</code>)</td><td>Blok <code>backend</code> berubah (local→S3 / ganti bucket) tapi belum migrasi.</td><td><code>terraform init -migrate-state</code> (pindah state) atau <code>-reconfigure</code> (abaikan state lama).</td><td>Rencanakan backend di awal; dokumentasikan perubahannya.</td></tr>
+        <tr><td>Terraform version mismatch</td><td>State/kode butuh versi tertentu (<code>required_version</code>) tapi CLI-mu beda.</td><td>Install versi yang sesuai (pakai tfenv/asdf + <code>.terraform-version</code>).</td><td>Pin <code>required_version</code> &amp; samakan versi seluruh tim.</td></tr>
+        <tr><td>Provider version conflict / <code>Failed to query available provider packages</code></td><td>Constraint provider bentrok, atau lock file (<code>.terraform.lock.hcl</code>) gak cocok.</td><td><code>terraform init -upgrade</code> untuk perbarui lock sesuai constraint.</td><td>Commit <code>.terraform.lock.hcl</code>, pin <code>~&gt; 6.0</code>.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Pola debugging yang sehat</h3>
+    <ol>
+      <li><strong>Baca baris pertama &amp; terakhir error</strong> — biasanya di situ inti masalahnya.</li>
+      <li><strong>Reproduksi kecil</strong> — isolasi ke satu resource kalau bisa.</li>
+      <li><strong>Cek dari sisi AWS</strong> — kadang masalahnya izin/region, bukan kode.</li>
+      <li><strong>Jalankan <code>terraform plan</code></strong> — lihat apa yang Terraform <em>kira</em> akan terjadi vs realita.</li>
+      <li><strong>Pakai <code>TF_LOG</code></strong> hanya saat buntu — terlalu verbose untuk harian.</li>
+    </ol>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Checkpoint Chapter 19</div>
+      <div class="qz-sub">Klik jawaban buat lihat benar/salah.</div>
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Kamu dapat <code>Error acquiring the state lock</code> padahal gak ada yang lagi apply. Langkah paling tepat?</div>
+        <button class="opt" data-correct="false">Langsung hapus file state-nya</button>
+        <button class="opt" data-correct="true">Pastikan benar-benar nyangkut, lalu <code>terraform force-unlock &lt;LOCK_ID&gt;</code></button>
+        <button class="opt" data-correct="false">Edit tabel lock manual sambil apply jalan</button>
+        <div class="explain"><code>force-unlock</code> dipakai hanya saat yakin lock-nya nyangkut (proses sebelumnya crash). Hapus state = bencana.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">true/false</span><code>InvalidAMIID.NotFound</code> sering muncul karena AMI ID di-hardcode dan dipakai di region yang salah.</div>
+        <button class="opt" data-correct="true">True</button>
+        <button class="opt" data-correct="false">False</button>
+        <div class="explain">AMI bersifat per-region. Solusi: ambil via <code>data "aws_ami"</code> dengan filter, jangan tempel ID.</div>
+      </div>
+      <div class="q">
+        <div class="qq"><span class="tag">singkat</span>Env var apa untuk mengaktifkan log debug Terraform, dan ke mana mengarahkan output-nya ke file?</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body"><code>TF_LOG=DEBUG</code> (atau <code>TRACE</code>) untuk level log, dan <code>TF_LOG_PATH=tf.log</code> untuk menyimpan ke file.</div></details>
+      </div>
+    </div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch19-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 20 : COST MANAGEMENT ============ -->
+<section id="c20"><div class="chapter" data-ch="20">
+  <div class="ch-head"><span class="ch-num">20</span><h2>Manajemen Biaya AWS</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Terraform itu kencang — satu <code>apply</code> bisa bikin puluhan resource dalam hitungan detik. Termasuk resource <strong>berbayar</strong>. Buat yang lagi belajar, ini area paling rawan "kaget tagihan". Aturan emasnya simpel: <em>tau apa yang dibuat, dan bersihin setelah selesai.</em></p>
+
+    <div class="box cost"><span class="bt">Mindset biaya</span><p>Setiap <code>plan</code> itu kesempatan terakhir kamu lihat "apa yang akan lahir". Baca jumlah <code>to add</code>. Kalau ada NAT Gateway, EIP nganggur, RDS, atau Load Balancer muncul tanpa kamu sadari — <strong>stop</strong> dan cek ulang.</p></div>
+
+    <h3>Resource yang sering bikin tagihan diam-diam</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Resource</th><th>Kenapa mahal / jebakan</th><th>Saran saat belajar</th></tr></thead>
+      <tbody>
+        <tr><td>NAT Gateway</td><td>Bayar <em>per jam</em> + per GB lewat, jalan 24/7 walau gak dipakai. Salah satu jebakan termahal pemula.</td><td>Hindari di lab. Pakai public subnet untuk EC2 belajar (lihat Lab 3).</td></tr>
+        <tr><td>Elastic IP (EIP)</td><td>EIP yang <em>tidak ter-attach</em> ke instance aktif justru ditagih.</td><td>Lepas/hapus EIP setelah lab. Cek di Console: EC2 → Elastic IPs.</td></tr>
+        <tr><td>EC2 besar</td><td>Tipe besar (mis. <code>m5.xlarge</code>) mahal per jam.</td><td>Pakai <code>t3.micro</code> / <code>t3.small</code>. Cek eligibility free tier.</td></tr>
+        <tr><td>RDS</td><td>Database jalan 24/7, storage + instance, lupa matiin = tagihan jalan terus.</td><td>Hindari kecuali memang materinya. Kalau perlu, hapus segera.</td></tr>
+        <tr><td>Load Balancer (ALB/NLB)</td><td>Bayar per jam + LCU. Sering nyangkut setelah lab.</td><td>Belum perlu di basic→intermediate. Hapus kalau sempat dibuat.</td></tr>
+        <tr><td>EBS volume &amp; Snapshot</td><td>Volume/snapshot yatim (instance sudah dihapus) tetap ditagih.</td><td><code>terraform destroy</code> rapi; cek volume "available" di Console.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>AWS Budgets &amp; alarm</h3>
+    <p>Aktifkan <strong>AWS Budgets</strong> dengan ambang kecil (mis. $5 atau $10) plus alert email. Ini jaring pengaman: begitu pengeluaran mendekati ambang, kamu langsung tahu — gak nunggu akhir bulan. Wajib banget untuk akun belajar.</p>
+
+    <h3>Tagging untuk pelacakan biaya</h3>
+    <p>Pakai <code>default_tags</code> di provider supaya semua resource ketempelan tag konsisten — gampang difilter di Cost Explorer berdasarkan project/owner/environment.</p>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">provider.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  region  = var.aws_region
+  profile = var.aws_profile
+
+  default_tags {
+    tags = {
+      Project     = "belajar-terraform"
+      Environment = "dev"
+      Owner       = "namamu"
+      ManagedBy   = "terraform"
+    }
+  }
+}</code></pre></div>
+
+    <div class="box clean"><span class="bt">✅ AWS Cost Safety Checklist</span><p>Sebelum tutup laptop setelah ngelab, pastikan:</p>
+      <ul>
+        <li><code>terraform destroy</code> sudah jalan &amp; sukses (cek output "Destroy complete!").</li>
+        <li>Cek <strong>EC2 Instances</strong> — gak ada yang running.</li>
+        <li>Cek <strong>Elastic IPs</strong> — gak ada EIP nganggur.</li>
+        <li>Cek <strong>NAT Gateways</strong> — kosong (harusnya gak pernah dibuat saat belajar).</li>
+        <li>Cek <strong>Load Balancers</strong> — kosong.</li>
+        <li>Cek <strong>EBS Volumes</strong> (status <em>available</em>) &amp; <strong>Snapshots</strong> yatim.</li>
+        <li>Cek <strong>S3</strong> — bucket lab kosong/terhapus (kecuali bucket backend yang sengaja disimpan).</li>
+        <li>Cek <strong>RDS</strong> — gak ada DB nyangkut.</li>
+        <li>AWS Budgets aktif dengan ambang kecil + email alert.</li>
+      </ul>
+    </div>
+
+    <div class="box danger"><span class="bt">Ingat soal bucket backend</span><p>Bucket S3 untuk <em>remote backend</em> sengaja TIDAK dihapus (dia nyimpen state-mu). Tapi dia super murah (cuma nyimpen file kecil). Yang wajib dibersihin itu resource lab (EC2, dll), bukan bucket state.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch20-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 21 : FINAL CAPSTONE ============ -->
+<section id="c21"><div class="chapter" data-ch="21">
+  <div class="ch-head"><span class="ch-num">21</span><h2>Capstone: Deploy Web App Infra di AWS</h2><span class="est">~90 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <span class="tagline cap">🏆 Final Project</span>
+    <p>Ini gabungan semua yang sudah dipelajari jadi satu proyek nyata tapi hemat biaya: <strong>"Deploy Simple Web App Infrastructure on AWS with Terraform"</strong>. Kalau kamu bisa selesai ini sendiri, kamu sudah pegang fondasi Terraform untuk kerja DevOps beneran.</p>
+
+    <h3>🎯 Learning objectives</h3>
+    <ul>
+      <li>Menyatukan provider, backend remote, variables, locals, data source, module, outputs, dan tagging dalam satu project rapi.</li>
+      <li>Membangun jaringan (VPC + public subnet + IGW + route) dari nol.</li>
+      <li>Menjalankan EC2 + Nginx via <code>user_data</code> dan mengaksesnya dari browser.</li>
+      <li>Memakai module reusable untuk web server.</li>
+      <li>Bekerja dengan dokumentasi (README) &amp; konvensi project produksi.</li>
+    </ul>
+
+    <h3>🏗️ Arsitektur</h3>
+    <div class="box info"><span class="bt">Yang akan dibangun</span><p>Sebuah VPC kecil dengan satu public subnet. Di dalamnya: satu EC2 (via module <code>ec2-web</code>) yang otomatis install Nginx dan menampilkan halaman sederhana. Ada Internet Gateway + route table biar bisa diakses dari internet. Plus satu S3 bucket untuk simpan aset statis / log. State disimpan di <strong>remote backend S3</strong> dengan native locking. <strong>Tanpa NAT Gateway</strong> (hemat) — EC2 langsung di public subnet karena ini lab.</p></div>
+    <div class="tree"><pre>Internet
+   │
+ [Internet Gateway]
+   │
+ [Route Table] ── 0.0.0.0/0 ──▶ IGW
+   │
+ ┌─────────── VPC 10.20.0.0/16 ───────────┐
+ │  ┌──── Public Subnet 10.20.1.0/24 ────┐ │
+ │  │   [EC2 t3.micro + Nginx]           │ │
+ │  │      ▲  SG: 80 (semua), 22 (CIDR)  │ │
+ │  └────────────────────────────────────┘ │
+ └──────────────────────────────────────────┘
+        S3 bucket (aset/log)  ◀── terpisah, regional</pre></div>
+
+    <h3>📁 Struktur project</h3>
+    <div class="tree"><pre>terraform-aws-final-project/
+├── README.md
+├── .gitignore
+├── versions.tf
+├── provider.tf
+├── backend.tf
+├── variables.tf
+├── terraform.tfvars.example
+├── locals.tf
+├── data.tf
+├── network.tf
+├── security.tf
+├── compute.tf
+├── storage.tf
+├── outputs.tf
+└── modules/
+    └── ec2-web/
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf</pre></div>
+
+    <h3>📄 File-by-file</h3>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">versions.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">terraform {
+  required_version = "&gt;= 1.10"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 6.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~&gt; 3.6"
+    }
+  }
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">provider.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">provider "aws" {
+  region  = var.aws_region
+  profile = var.aws_profile
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    }
+  }
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">backend.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># Isi bucket sesuai bucket backend yang sudah kamu buat di Lab 2.
+# Native S3 locking (use_lockfile) — DynamoDB tidak diperlukan lagi.
+terraform {
+  backend "s3" {
+    bucket       = "GANTI-nama-bucket-state-kamu"
+    key          = "final-project/terraform.tfstate"
+    region       = "ap-southeast-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}</code></pre></div>
+    <div class="box tip"><span class="bt">Belum punya bucket backend?</span><p>Kalau mau cepat, hapus dulu <code>backend.tf</code> supaya pakai state lokal, atau buat bucket-nya dulu lewat <code>bootstrap.sh</code> di Lab 2 (Ch.9). Untuk capstone yang "beneran", remote backend dianjurkan.</p></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">variables.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "aws_region" {
+  description = "Region AWS"
+  type        = string
+  default     = "ap-southeast-1"
+}
+
+variable "aws_profile" {
+  description = "AWS CLI profile"
+  type        = string
+  default     = "belajar"
+}
+
+variable "project_name" {
+  description = "Nama project untuk penamaan &amp; tag"
+  type        = string
+  default     = "tf-final"
+}
+
+variable "environment" {
+  description = "Lingkungan (dev/staging/prod)"
+  type        = string
+  default     = "dev"
+}
+
+variable "vpc_cidr" {
+  type    = string
+  default = "10.20.0.0/16"
+}
+
+variable "public_subnet_cidr" {
+  type    = string
+  default = "10.20.1.0/24"
+}
+
+variable "instance_type" {
+  type    = string
+  default = "t3.micro"
+}
+
+variable "allowed_ssh_cidr" {
+  description = "CIDR yang boleh SSH. JANGAN 0.0.0.0/0. Isi IP publikmu/32."
+  type        = string
+  # default sengaja tidak diisi — wajib di-set sadar di tfvars
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terraform.tfvars.example</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># Salin jadi terraform.tfvars lalu sesuaikan. JANGAN commit terraform.tfvars asli.
+aws_region       = "ap-southeast-1"
+aws_profile      = "belajar"
+project_name     = "tf-final"
+environment      = "dev"
+instance_type    = "t3.micro"
+allowed_ssh_cidr = "203.0.113.10/32"   # ganti dengan IP publikmu/32</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">locals.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">locals {
+  name_prefix = "${var.project_name}-${var.environment}"
+
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">data.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># AMI Amazon Linux 2023 terbaru, owner resmi Amazon — jangan hardcode AMI ID.
+data "aws_ami" "al2023" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# AZ yang tersedia di region aktif.
+data "aws_availability_zones" "available" {
+  state = "available"
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">network.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = { Name = "${local.name_prefix}-vpc" }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = true
+  tags = { Name = "${local.name_prefix}-public-subnet" }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "${local.name_prefix}-igw" }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+  tags = { Name = "${local.name_prefix}-public-rt" }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">security.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_security_group" "web" {
+  name        = "${local.name_prefix}-web-sg"
+  description = "Allow HTTP from anywhere, SSH from allowed CIDR"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH (dibatasi)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${local.name_prefix}-web-sg" }
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">compute.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># Pakai module reusable ec2-web (didefinisikan di modules/ec2-web).
+module "web" {
+  source = "./modules/ec2-web"
+
+  name_prefix       = local.name_prefix
+  ami_id            = data.aws_ami.al2023.id
+  instance_type     = var.instance_type
+  subnet_id         = aws_subnet.public.id
+  security_group_id = aws_security_group.web.id
+  tags              = local.common_tags
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">storage.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl"># Bucket nama global-unik: prefix + suffix acak.
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+resource "aws_s3_bucket" "assets" {
+  bucket = "${local.name_prefix}-assets-${random_id.suffix.hex}"
+  tags   = { Name = "${local.name_prefix}-assets" }
+}
+
+resource "aws_s3_bucket_versioning" "assets" {
+  bucket = aws_s3_bucket.assets.id
+  versioning_configuration { status = "Enabled" }
+}
+
+resource "aws_s3_bucket_public_access_block" "assets" {
+  bucket                  = aws_s3_bucket.assets.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">outputs.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">output "web_public_ip" {
+  description = "IP publik EC2"
+  value       = module.web.public_ip
+}
+
+output "web_url" {
+  description = "URL untuk dibuka di browser"
+  value       = "http://${module.web.public_ip}"
+}
+
+output "assets_bucket" {
+  description = "Nama S3 bucket aset"
+  value       = aws_s3_bucket.assets.bucket
+}</code></pre></div>
+
+    <span class="tagline ex">📦 Module ec2-web</span>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/variables.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">variable "name_prefix"       { type = string }
+variable "ami_id"            { type = string }
+variable "instance_type"     { type = string }
+variable "subnet_id"         { type = string }
+variable "security_group_id" { type = string }
+variable "tags" {
+  type    = map(string)
+  default = {}
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/main.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">resource "aws_instance" "this" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [var.security_group_id]
+
+  user_data = &lt;&lt;-EOT
+    #!/bin/bash
+    dnf -y install nginx
+    systemctl enable --now nginx
+    echo "&lt;h1&gt;${var.name_prefix} — deployed by Terraform 🚀&lt;/h1&gt;" &gt; /usr/share/nginx/html/index.html
+  EOT
+
+  tags = merge(var.tags, { Name = "${var.name_prefix}-web" })
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">modules/ec2-web/outputs.tf</span><button class="copy">copy</button></div>
+<pre><code class="lang-hcl">output "instance_id" {
+  value = aws_instance.this.id
+}
+
+output "public_ip" {
+  value = aws_instance.this.public_ip
+}</code></pre></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">.gitignore</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash">.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl  # opsional: banyak tim justru COMMIT file ini
+override.tf
+override.tf.json</code></pre></div>
+    <div class="box info"><span class="bt">Catatan .terraform.lock.hcl</span><p>Beda dengan tfstate, <code>.terraform.lock.hcl</code> (lock versi provider) biasanya <strong>di-commit</strong> supaya semua tim pakai versi provider yang sama. Baris di atas cuma contoh — sesuaikan dengan kebijakan tim.</p></div>
+
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">README.md (ringkas)</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># Terraform AWS Final Project
+
+Infra web app sederhana: VPC + public subnet + EC2 (Nginx) + S3, state di S3 remote backend.
+
+## Prasyarat
+- Terraform &gt;= 1.10, AWS CLI terkonfigurasi (profile `belajar`)
+- Bucket backend sudah dibuat (lihat backend.tf)
+
+## Cara jalan
+cp terraform.tfvars.example terraform.tfvars   # isi allowed_ssh_cidr
+terraform init
+terraform fmt &amp;&amp; terraform validate
+terraform plan
+terraform apply
+
+Buka URL dari output `web_url` di browser.
+
+## Bersih-bersih
+terraform destroy
+
+## Biaya
+Pakai t3.micro, tanpa NAT Gateway. Tetap DESTROY setelah selesai.</code></pre></div>
+
+    <h3>▶️ Cara run, test &amp; destroy</h3>
+    <div class="code"><div class="code-head"><div class="dots"><i></i><i></i><i></i></div><span class="fname">terminal</span><button class="copy">copy</button></div>
+<pre><code class="lang-bash"># 1. Siapkan variabel
+cp terraform.tfvars.example terraform.tfvars
+# edit allowed_ssh_cidr -> IP publikmu/32 (cek: curl ifconfig.me)
+
+# 2. Inisialisasi (download provider + setup backend)
+terraform init
+
+# 3. Rapikan & validasi
+terraform fmt
+terraform validate
+
+# 4. Preview
+terraform plan
+
+# 5. Eksekusi
+terraform apply
+# ketik: yes
+
+# 6. TEST: ambil URL lalu buka di browser
+terraform output web_url
+# atau langsung:
+curl "$(terraform output -raw web_url)"
+
+# 7. BERESIN (WAJIB)
+terraform destroy
+# ketik: yes</code></pre></div>
+
+    <div class="box danger"><span class="bt">Jangan lupa destroy</span><p>Setelah lihat halaman Nginx-mu jalan &amp; merasa puas, langsung <code>terraform destroy</code>. EC2 yang lupa dimatiin = tagihan jalan. Cek juga checklist biaya di Ch.20.</p></div>
+
+    <h3>🐞 Common issues</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Gejala</th><th>Penyebab umum</th><th>Solusi</th></tr></thead>
+      <tbody>
+        <tr><td>URL gak kebuka / timeout</td><td>Nginx belum kelar install, atau SG belum allow 80.</td><td>Tunggu 1–2 menit (user_data butuh waktu). Cek SG ingress 80.</td></tr>
+        <tr><td>Apply minta <code>allowed_ssh_cidr</code></td><td>Variable wajib belum diisi.</td><td>Isi di <code>terraform.tfvars</code> (IP publikmu/32).</td></tr>
+        <tr><td><code>BucketAlreadyExists</code></td><td>Suffix acak bentrok (jarang) / nama backend salah.</td><td>Apply ulang (random_id baru) — atau cek nama bucket backend.</td></tr>
+        <tr><td>Backend init error</td><td>Bucket backend belum ada / nama salah.</td><td>Buat bucket dulu, atau hapus <code>backend.tf</code> untuk state lokal.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>🚀 Ide pengembangan (extension)</h3>
+    <ul>
+      <li>Tambah <strong>Application Load Balancer</strong> + 2 EC2 di 2 AZ (sadar biaya — hapus cepat).</li>
+      <li>Ganti SSH dengan <strong>SSM Session Manager</strong> (lebih aman, gak perlu buka port 22).</li>
+      <li>Pisahkan jadi <strong>environments/dev &amp; prod</strong> dengan backend key berbeda.</li>
+      <li>Tambah <strong>GitHub Actions</strong> plan-on-PR (Ch.18).</li>
+      <li>Pindahkan jaringan ke <strong>module vpc</strong> sendiri biar makin reusable.</li>
+      <li>Pasang <strong>Checkov</strong> di CI untuk scan keamanan otomatis.</li>
+    </ul>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch21-done"> <span>Tandai capstone selesai 🏆</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 22 : QUIZ & EXERCISES (REVIEW) ============ -->
+<section id="c22"><div class="chapter" data-ch="22">
+  <div class="ch-head"><span class="ch-num">22</span><h2>Quiz Review &amp; Latihan Skenario</h2><span class="est">~25 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Di sepanjang materi sudah ada <strong>Checkpoint</strong> di tiap kelompok chapter (klik jawaban → langsung lihat benar/salah, gak ada skor). Bagian ini latihan <em>skenario</em> — tipe soal yang paling mirip situasi kerja nyata. Jawab di kepala dulu, baru buka kunci.</p>
+
+    <div class="quiz" data-quiz>
+      <div class="qz-title">✦ Latihan Skenario (campuran)</div>
+      <div class="qz-sub">Pilgan &amp; true/false langsung klik; skenario buka detail jawaban.</div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span>Temanmu meng-commit <code>terraform.tfstate</code> ke GitHub. Bahaya utamanya?</div>
+        <button class="opt" data-correct="false">State bikin repo lambat saja</button>
+        <button class="opt" data-correct="true">State bisa berisi nilai sensitif (password, dll) dalam bentuk plaintext</button>
+        <button class="opt" data-correct="false">Terraform jadi gak bisa <code>plan</code></button>
+        <div class="explain">State bisa menyimpan secret apa adanya. Itu sebab utama state tidak boleh masuk Git &amp; harus di backend terenkripsi + akses dibatasi.</div>
+      </div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">true/false</span>Dengan native S3 locking (<code>use_lockfile = true</code>), kamu tetap wajib membuat tabel DynamoDB untuk locking.</div>
+        <button class="opt" data-correct="false">True</button>
+        <button class="opt" data-correct="true">False</button>
+        <div class="explain"><code>use_lockfile = true</code> menggantikan DynamoDB. <code>dynamodb_table</code> kini deprecated. Cukup S3 saja.</div>
+      </div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">pilgan</span><code>terraform plan</code> menampilkan <code>~</code> di depan sebuah resource. Artinya?</div>
+        <button class="opt" data-correct="false">Resource akan dibuat baru</button>
+        <button class="opt" data-correct="true">Resource akan diubah di tempat (update in-place)</button>
+        <button class="opt" data-correct="false">Resource akan dihancurkan</button>
+        <div class="explain"><code>+</code> create, <code>~</code> update in-place, <code>-</code> destroy, <code>-/+</code> replace (hancur lalu buat lagi).</div>
+      </div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">skenario</span>Kamu ubah AMI lewat <code>data "aws_ami"</code> dengan <code>most_recent = true</code>. Tiba-tiba <code>plan</code> mau me-<em>replace</em> EC2 padahal kamu gak ubah apa-apa. Kenapa &amp; gimana mengelolanya?</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body">Amazon merilis AMI baru → <code>most_recent</code> ambil ID baru → EC2 dianggap perlu diganti. Kelola dengan: pin AMI ID untuk lingkungan stabil, atau pakai <code>lifecycle { ignore_changes = [ami] }</code>, atau sengaja kontrol kapan upgrade AMI.</div></details>
+      </div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">skenario</span>Untuk memisahkan dev &amp; prod, lebih disarankan folder terpisah atau workspace? Jelaskan singkat.</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body">Untuk environment yang beda secara serius (config beda, blast radius beda), <strong>folder + state terpisah</strong> lebih jelas &amp; aman. Workspace cocok untuk variasi ringan/ephemeral, tapi gampang bikin orang salah apply ke env yang keliru karena kode &amp; backend-nya sama.</div></details>
+      </div>
+
+      <div class="q">
+        <div class="qq"><span class="tag">skenario</span>CI kamu auto-<code>apply</code> ke prod tiap merge ke <code>main</code>. Kenapa berbahaya &amp; apa perbaikannya?</div>
+        <details class="answer"><summary>Lihat jawaban</summary><div class="ans-body">Satu PR keliru bisa langsung mengubah/menghapus resource prod tanpa rem. Perbaikan: gerbang <strong>manual approval</strong> (GitHub Environment + required reviewers), branch protection, dan plan yang ditinjau dulu sebelum apply.</div></details>
+      </div>
+    </div>
+
+    <div class="box tip"><span class="bt">Cara latihan paling efektif</span><p>Jangan cuma baca. Ketik ulang kodenya, <code>apply</code>, lihat hasilnya di Console, <code>destroy</code>. Otot terbentuk dari repetisi, bukan dari teori.</p></div>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch22-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 23 : GLOSSARY ============ -->
+<section id="c23"><div class="chapter" data-ch="23">
+  <div class="ch-head"><span class="ch-num">23</span><h2>Glosarium</h2><span class="est">~15 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Kamus istilah versi ramah pemula. Balik ke sini kapan pun ada kata yang bikin bingung.</p>
+    <dl class="gloss">
+      <dt>IaC (Infrastructure as Code)</dt><dd>Mengelola infrastruktur (server, jaringan, dll) lewat file kode, bukan klik manual. Bisa di-review, di-versioning, dan diulang.</dd>
+      <dt>Provider</dt><dd>Plugin penerjemah antara Terraform dan API suatu layanan (mis. AWS). Tanpa provider AWS, Terraform gak bisa "ngomong" ke AWS.</dd>
+      <dt>Resource</dt><dd>Satu objek infrastruktur yang dikelola Terraform (EC2, VPC, S3 bucket, dll). Terraform yang membuat &amp; menghapusnya.</dd>
+      <dt>Data source</dt><dd>Mengambil info tentang sesuatu yang <em>sudah ada</em> (mis. AMI terbaru, VPC default) tanpa membuatnya. Read-only.</dd>
+      <dt>State</dt><dd>"Memori" Terraform: catatan resource apa yang dikelola &amp; kondisinya. Disimpan di <code>terraform.tfstate</code>.</dd>
+      <dt>Backend</dt><dd>Tempat menyimpan state. <em>Local</em> = di laptop. <em>Remote</em> = di S3 (dipakai bareng tim, aman).</dd>
+      <dt>Locking</dt><dd>Penguncian state saat ada yang apply, supaya gak ada dua orang mengubah barengan &amp; merusak state.</dd>
+      <dt>Module</dt><dd>Kumpulan resource yang dibungkus jadi komponen reusable, mirip "fungsi" di pemrograman.</dd>
+      <dt>Variable</dt><dd>Input untuk kode Terraform supaya fleksibel (mis. region, instance type) tanpa edit isi resource.</dd>
+      <dt>Output</dt><dd>Nilai yang "dikeluarkan" Terraform setelah apply (mis. IP publik EC2), buat dilihat/dipakai modul lain.</dd>
+      <dt>Local</dt><dd>Nilai turunan/temporary di dalam kode untuk menghindari pengulangan, mis. <code>name_prefix</code>.</dd>
+      <dt>Plan</dt><dd>Pratinjau perubahan: apa yang akan dibuat/diubah/dihapus, <em>sebelum</em> dieksekusi.</dd>
+      <dt>Apply</dt><dd>Eksekusi perubahan ke infrastruktur nyata sesuai plan.</dd>
+      <dt>Destroy</dt><dd>Menghancurkan semua resource yang dikelola. Sangat menentukan — pakai hati-hati.</dd>
+      <dt>Drift</dt><dd>Selisih antara kondisi nyata di AWS dan yang tercatat di state (mis. karena diubah manual lewat Console).</dd>
+      <dt>Idempotency</dt><dd>Sifat: menjalankan apply berkali-kali dengan kode sama menghasilkan kondisi akhir yang sama, tanpa efek samping berulang.</dd>
+      <dt>Dependency graph</dt><dd>Peta ketergantungan antar resource yang Terraform susun untuk menentukan urutan buat/hapus.</dd>
+      <dt>Immutable infrastructure</dt><dd>Pola: kalau perlu berubah, buat resource baru lalu ganti — bukan mengutak-atik yang lama di tempat.</dd>
+      <dt>Least privilege</dt><dd>Prinsip keamanan: beri izin seminimal yang diperlukan, tidak lebih.</dd>
+      <dt>Remote state</dt><dd>State yang disimpan di backend remote (mis. S3), bisa diakses tim &amp; CI secara aman.</dd>
+      <dt>Workspace</dt><dd>Mekanisme bawaan Terraform untuk punya beberapa state dari satu kode (mis. default/dev). Berguna, tapi jangan untuk pemisahan env serius.</dd>
+    </dl>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch23-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ CH 24 : MENTOR NOTES ============ -->
+<section id="c24"><div class="chapter" data-ch="24">
+  <div class="ch-head"><span class="ch-num">24</span><h2>Catatan untuk Mentor</h2><span class="est">~20 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <div class="box info"><span class="bt">Khusus kamu, si mentor 👋</span><p>Bagian ini bukan untuk learner — ini panduan buatmu yang sudah DevSecOps berpengalaman, supaya sesi mentoring-nya terstruktur &amp; learner-mu naik level beneran, bukan cuma ikut-ikutan ketik.</p></div>
+
+    <h3>Cara membawakan materi per sesi</h3>
+    <ul>
+      <li><strong>Live coding, bukan slide.</strong> Buka terminal bareng. Biarkan dia ngetik, kamu yang nanya "menurut kamu <code>plan</code> ini bakal ngapain?".</li>
+      <li><strong>Selalu <code>plan</code> sebelum <code>apply</code>.</strong> Tanamkan kebiasaan baca diff sejak hari pertama.</li>
+      <li><strong>Destroy itu bagian dari ritual.</strong> Akhiri tiap sesi lab dengan <code>destroy</code> + cek Console. Disiplin biaya = disiplin engineer.</li>
+      <li><strong>Biarkan dia kena error.</strong> Error adalah guru terbaik. Jangan buru-buru kasih jawaban — pandu cara <em>membaca</em> error-nya.</li>
+    </ul>
+
+    <h3>Rencana 4 minggu</h3>
+    <div class="week-grid">
+      <div class="week-card">
+        <h4>Minggu 1 — Fondasi</h4>
+        <p>Konsep IaC &amp; mental model (Ch.1–4), setup tools (Ch.2–3), Lab 1 S3 bucket (Ch.5), perintah inti: <code>init/fmt/validate/plan/apply/destroy</code>.</p>
+        <p><strong>Tugas:</strong> bikin S3 bucket sendiri dengan nama unik + 2 tag, lalu destroy.</p>
+      </div>
+      <div class="week-card">
+        <h4>Minggu 2 — Bahasa &amp; Compute</h4>
+        <p>HCL basics, variables/outputs/locals (Ch.6), AWS provider (Ch.7), data sources (Ch.11), Lab 3 EC2 + Nginx (Ch.10).</p>
+        <p><strong>Tugas:</strong> deploy EC2 Nginx, akses dari browser, parametrik via tfvars, destroy.</p>
+      </div>
+      <div class="week-card">
+        <h4>Minggu 3 — State &amp; Struktur</h4>
+        <p>State (Ch.8), remote backend S3 + locking (Ch.9), dependencies &amp; lifecycle (Ch.12–13), modules (Ch.15), struktur project (Ch.16), workspace (Ch.14).</p>
+        <p><strong>Tugas:</strong> migrasi state lokal → remote backend; bungkus EC2 jadi module.</p>
+      </div>
+      <div class="week-card">
+        <h4>Minggu 4 — Security &amp; Capstone</h4>
+        <p>Security/DevSecOps (Ch.17), Git + GitHub Actions OIDC (Ch.18), debugging &amp; biaya (Ch.19–20), <strong>Capstone</strong> (Ch.21), review.</p>
+        <p><strong>Tugas:</strong> selesaikan capstone end-to-end sendiri + jalankan Checkov.</p>
+      </div>
+    </div>
+
+    <h3>Apa yang perlu ditekankan</h3>
+    <ul>
+      <li><strong>State itu sakral.</strong> Paham kenapa gak boleh di-commit &amp; kenapa remote backend penting.</li>
+      <li><strong>Selalu baca <code>plan</code>.</strong> Ini skill yang membedakan engineer hati-hati vs ceroboh.</li>
+      <li><strong>Keamanan sejak awal:</strong> jangan hardcode key, jangan <code>0.0.0.0/0</code> untuk SSH, least privilege.</li>
+      <li><strong>Biaya:</strong> destroy setelah lab, hindari NAT Gateway/RDS saat belajar.</li>
+    </ul>
+
+    <h3>Kesalahan yang aman dibiarkan terjadi</h3>
+    <ul>
+      <li>Lupa <code>terraform init</code> setelah ubah provider → biar dia kenal pesan error-nya.</li>
+      <li>Nama S3 bentrok (<code>BucketAlreadyExists</code>) → mengajarkan kenapa butuh suffix unik.</li>
+      <li>Hardcode AMI ID lalu pindah region → paham kenapa pakai data source.</li>
+      <li>Apply lalu lupa destroy (di akun sandbox kecil) → pelajaran biaya yang membekas (pantau via Budgets).</li>
+    </ul>
+    <div class="box warn"><span class="bt">Tapi jangan biarkan yang ini</span><p>Commit secret/state ke repo, buka SSH <code>0.0.0.0/0</code> di akun berisi data nyata, atau apply di akun produksi. Yang berisiko nyata harus dicegah, bukan "dibiarkan sebagai pelajaran".</p></div>
+
+    <h3>Cara me-review kode Terraform learner</h3>
+    <ul>
+      <li>Apakah <code>terraform fmt</code> &amp; <code>validate</code> lulus?</li>
+      <li>Versi di-pin? (<code>required_version</code>, provider <code>~&gt; 6.0</code>)</li>
+      <li>Ada secret/IP hardcoded? SSH dibatasi CIDR?</li>
+      <li>Penamaan &amp; tagging konsisten (pakai <code>locals</code>/<code>default_tags</code>)?</li>
+      <li>Struktur file masuk akal (gak semua numpuk di <code>main.tf</code>)?</li>
+      <li>Output berguna? State di backend remote? <code>.gitignore</code> benar?</li>
+    </ul>
+
+    <h3>Pertanyaan untuk menguji pemahaman</h3>
+    <ul>
+      <li>"Apa beda <code>plan</code> dan <code>apply</code>? Kenapa kita selalu plan dulu?"</li>
+      <li>"Kenapa state gak boleh masuk Git?"</li>
+      <li>"Kapan kamu butuh <code>depends_on</code>, dan kapan tidak?"</li>
+      <li>"Apa risiko <code>most_recent = true</code> di data AMI?"</li>
+      <li>"Kenapa OIDC lebih aman dari access key statis di GitHub Actions?"</li>
+      <li>"<code>sensitive = true</code> bikin secret aman 100%? Jelaskan."</li>
+    </ul>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch24-done"> <span>Tandai chapter ini selesai ✔</span></label>
+  </div>
+</div></section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq"><div class="chapter" data-ch="25">
+  <div class="ch-head"><span class="ch-num">?</span><h2>FAQ</h2><span class="est">~10 mnt</span><span class="chev">▶</span></div>
+  <div class="ch-body">
+    <p>Pertanyaan yang paling sering muncul dari learner pemula.</p>
+
+    <details class="answer"><summary>Terraform vs CloudFormation, pilih mana?</summary><div class="ans-body">CloudFormation khusus AWS; Terraform multi-cloud &amp; ekosistemnya lebih luas. Untuk karir Cloud/DevOps yang fleksibel, Terraform pilihan aman. Skill-nya juga transferable ke provider lain.</div></details>
+
+    <details class="answer"><summary>Apakah perlu jago AWS dulu sebelum Terraform?</summary><div class="ans-body">Perlu paham <em>konsep</em> dasar (VPC, EC2, IAM, S3, SG) — dan kamu sudah. Terraform cuma cara mendeklarasikannya. Justru belajar Terraform memperkuat pemahaman AWS-mu.</div></details>
+
+    <details class="answer"><summary>Aman gak ngelab pakai akun AWS pribadi?</summary><div class="ans-body">Aman <em>asal</em>: pakai akun/IAM khusus belajar, aktifkan AWS Budgets ambang kecil, pakai resource murah (t3.micro), dan selalu <code>destroy</code>. Hindari akun yang berisi data/kerjaan nyata.</div></details>
+
+    <details class="answer"><summary>Kenapa <code>terraform destroy</code> minta konfirmasi terus?</summary><div class="ans-body">Karena destroy menghapus resource nyata — itu rem keamanan. Di otomatisasi (CI) baru pakai <code>-auto-approve</code>, dan itu pun dengan gerbang manual approval.</div></details>
+
+    <details class="answer"><summary>State-ku rusak / nyangkut, gimana?</summary><div class="ans-body">Jangan panik &amp; jangan edit manual. Untuk lock nyangkut: <code>force-unlock</code> setelah yakin. Untuk state korup: backend S3 dengan <em>versioning</em> memungkinkan rollback ke versi state sebelumnya. Itu sebab versioning bucket backend wajib.</div></details>
+
+    <details class="answer"><summary>Versi Terraform yang dipakai materi ini apa?</summary><div class="ans-body">Seri stable <strong>1.14.x</strong> (label "Latest" di rilis resmi HashiCorp). Seri 1.15.x masih <em>alpha</em> saat materi ditulis, jadi belum direkomendasikan. Provider AWS seri <strong>6.x</strong> (<code>~&gt; 6.0</code>).</div></details>
+
+    <details class="answer"><summary>Masih perlu DynamoDB untuk state locking?</summary><div class="ans-body">Tidak. Sejak Terraform 1.11 ada native S3 locking via <code>use_lockfile = true</code>. Argumen <code>dynamodb_table</code> kini deprecated. Materi ini mengajarkan cara modern; DynamoDB hanya dijelaskan sebagai legacy.</div></details>
+
+    <details class="answer"><summary>Bedanya <code>variables.tf</code> dan <code>terraform.tfvars</code>?</summary><div class="ans-body"><code>variables.tf</code> = <em>deklarasi</em> variabel (nama, tipe, default). <code>terraform.tfvars</code> = <em>nilai</em> aktualnya. tfvars asli jangan di-commit (bisa berisi nilai sensitif); commit <code>terraform.tfvars.example</code> sebagai contoh.</div></details>
+
+    <details class="answer"><summary>Habis ini belajar apa?</summary><div class="ans-body">Sesuai jalur mentoring: lanjut ke <strong>Kubernetes</strong>. Dari sisi Terraform, kamu bisa eksplor: remote state data source, Terragrunt, testing (Terratest), dan provider lain. Tapi kuasai fondasi ini dulu sampai lancar.</div></details>
+
+    <label class="done-toggle"><input type="checkbox" data-prog="ch25-done"> <span>Selesai baca FAQ ✔</span></label>
+  </div>
+</div></section>
+
+    <div class="footer">
+      <p>Dibuat sebagai modul mini-bootcamp <b>Terraform on AWS</b> · basic → intermediate.<br>
+      Terraform <b>1.14.x</b> stable · AWS provider <b>~&gt; 6.0</b> · native S3 locking (<b>use_lockfile</b>).<br>
+      Selalu <b>plan</b> sebelum <b>apply</b>, dan <b>destroy</b> setelah ngelab. Happy building! 🚀</p>
+    </div>
+  </main>
+</div>
+
+<button class="backtop icon-btn" id="backTop" aria-label="Kembali ke atas">↑</button>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- safe localStorage wrapper ---------- */
+  var store = {
+    get: function (k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { window.localStorage.removeItem(k); } catch (e) {} }
+  };
+
+  var doc = document;
+  var root = doc.documentElement;
+
+  /* ---------- THEME TOGGLE ---------- */
+  var themeBtn = doc.getElementById("themeBtn");
+  function applyTheme(t) {
+    if (t === "dark") { root.setAttribute("data-theme", "dark"); themeBtn.textContent = "☀️"; }
+    else { root.setAttribute("data-theme", "light"); themeBtn.textContent = "🌙"; }
+  }
+  applyTheme(store.get("tf_theme") || "light");
+  themeBtn.addEventListener("click", function () {
+    var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next); store.set("tf_theme", next);
+  });
+
+  /* ---------- BUILD SIDEBAR NAV ---------- */
+  var nav = doc.getElementById("nav");
+  var sections = Array.prototype.slice.call(doc.querySelectorAll("main > section"));
+  var navLinks = [];
+  sections.forEach(function (sec) {
+    var head = sec.querySelector(".ch-head");
+    if (!head) return;
+    var numEl = head.querySelector(".ch-num");
+    var titleEl = head.querySelector("h2");
+    var num = numEl ? numEl.textContent.trim() : "";
+    var title = titleEl ? titleEl.textContent.trim() : sec.id;
+    var a = doc.createElement("a");
+    a.href = "#" + sec.id;
+    a.setAttribute("data-target", sec.id);
+    a.innerHTML = '<span class="num">' + num + '</span><span class="lbl">' + title + '</span>';
+    nav.appendChild(a);
+    navLinks.push(a);
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      var ch = sec.querySelector(".chapter");
+      if (ch && !ch.classList.contains("open")) ch.classList.add("open");
+      sec.scrollIntoView({ behavior: "smooth", block: "start" });
+      closeSidebar();
+    });
+  });
+
+  /* ---------- ACTIVE LINK ON SCROLL ---------- */
+  var byId = {};
+  navLinks.forEach(function (a) { byId[a.getAttribute("data-target")] = a; });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          navLinks.forEach(function (a) { a.classList.remove("active"); });
+          var link = byId[en.target.id];
+          if (link) link.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-15% 0px -70% 0px", threshold: 0 });
+    sections.forEach(function (s) { io.observe(s); });
+  }
+
+  /* ---------- CHAPTER OPEN / CLOSE ---------- */
+  doc.querySelectorAll(".chapter .ch-head").forEach(function (head) {
+    head.addEventListener("click", function () {
+      head.parentElement.classList.toggle("open");
+    });
+  });
+
+  /* ---------- PROGRESS CHECKLIST ---------- */
+  var progBoxes = Array.prototype.slice.call(doc.querySelectorAll("[data-prog]"));
+  var progBar = doc.getElementById("progBar");
+  var progPct = doc.getElementById("progPct");
+  var PKEY = "tf_progress_v1";
+
+  function loadProg() {
+    var raw = store.get(PKEY);
+    if (!raw) return {};
+    try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
+  }
+  function saveProg(state) { store.set(PKEY, JSON.stringify(state)); }
+
+  function refreshProg() {
+    var total = progBoxes.length;
+    var done = progBoxes.filter(function (b) { return b.checked; }).length;
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    progBar.style.width = pct + "%";
+    progPct.textContent = pct;
+  }
+
+  var saved = loadProg();
+  progBoxes.forEach(function (b) {
+    var id = b.getAttribute("data-prog");
+    if (saved[id]) b.checked = true;
+    b.addEventListener("change", function () {
+      var st = loadProg();
+      if (b.checked) st[id] = 1; else delete st[id];
+      saveProg(st); refreshProg();
+    });
+  });
+  refreshProg();
+
+  var resetBtn = doc.getElementById("resetProg");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      store.del(PKEY);
+      progBoxes.forEach(function (b) { b.checked = false; });
+      refreshProg();
+    });
+  }
+
+  /* ---------- COPY BUTTONS ---------- */
+  doc.querySelectorAll(".code .copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var block = btn.closest(".code");
+      var code = block ? block.querySelector("code") : null;
+      if (!code) return;
+      var text = code.textContent;
+      var done = function () {
+        var old = btn.textContent;
+        btn.textContent = "copied ✓"; btn.classList.add("ok");
+        setTimeout(function () { btn.textContent = old; btn.classList.remove("ok"); }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+      } else { fallbackCopy(text, done); }
+    });
+  });
+  function fallbackCopy(text, cb) {
+    try {
+      var ta = doc.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      doc.body.appendChild(ta); ta.select();
+      doc.execCommand("copy"); doc.body.removeChild(ta); cb();
+    } catch (e) {}
+  }
+
+  /* ---------- QUIZ LOGIC ---------- */
+  doc.querySelectorAll(".quiz .q").forEach(function (q) {
+    var opts = Array.prototype.slice.call(q.querySelectorAll(".opt"));
+    var explain = q.querySelector(".explain");
+    opts.forEach(function (opt) {
+      opt.addEventListener("click", function () {
+        if (q.getAttribute("data-answered")) return;
+        q.setAttribute("data-answered", "1");
+        var correct = opt.getAttribute("data-correct") === "true";
+        opts.forEach(function (o) {
+          if (o.getAttribute("data-correct") === "true") o.classList.add("correct");
+        });
+        if (!correct) opt.classList.add("wrong");
+        if (explain) explain.classList.add("show");
+      });
+    });
+  });
+
+  /* ---------- SEARCH / FILTER ---------- */
+  var search = doc.getElementById("search");
+  if (search) {
+    search.addEventListener("input", function () {
+      var term = search.value.trim().toLowerCase();
+      navLinks.forEach(function (a) {
+        var sec = doc.getElementById(a.getAttribute("data-target"));
+        var hay = (a.textContent + " " + (sec ? sec.textContent : "")).toLowerCase();
+        if (!term || hay.indexOf(term) !== -1) a.classList.remove("nav-hidden");
+        else a.classList.add("nav-hidden");
+      });
+    });
+  }
+
+  /* ---------- MOBILE SIDEBAR ---------- */
+  var sidebar = doc.getElementById("sidebar");
+  var scrim = doc.getElementById("scrim");
+  var menuBtn = doc.getElementById("menuBtn");
+  function openSidebar() { sidebar.classList.add("open"); scrim.classList.add("show"); }
+  function closeSidebar() { sidebar.classList.remove("open"); scrim.classList.remove("show"); }
+  if (menuBtn) menuBtn.addEventListener("click", function () {
+    if (sidebar.classList.contains("open")) closeSidebar(); else openSidebar();
+  });
+  if (scrim) scrim.addEventListener("click", closeSidebar);
+
+  /* ---------- BACK TO TOP ---------- */
+  var backTop = doc.getElementById("backTop");
+  window.addEventListener("scroll", function () {
+    if (window.scrollY > 600) backTop.classList.add("show");
+    else backTop.classList.remove("show");
+  });
+  backTop.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  /* ---------- LIGHTWEIGHT SYNTAX HIGHLIGHTER ---------- */
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  var KW = {
+    hcl: /\b(resource|data|provider|variable|output|locals|module|terraform|backend|required_providers|required_version|for_each|count|depends_on|lifecycle|dynamic|true|false|null|sensitive|default|type|description|source|version)\b/g,
+    bash: /\b(terraform|aws|export|unset|cd|cp|curl|echo|dnf|yum|apt|sudo|systemctl|chmod|git|bash|cat|mkdir|rm|ssh|init|plan|apply|destroy|fmt|validate|import|output|state|workspace|force-unlock)\b/g,
+    yaml: /\b(name|on|jobs|steps|uses|with|run|permissions|runs-on|environment|push|pull_request|paths|branches|id-token|contents)\b/g,
+    json: /\b(true|false|null)\b/g
+  };
+  function highlight(raw, lang) {
+    // tokenize comments & strings first via placeholders to protect them
+    var parts = [];
+    var work = raw;
+
+    // double-quoted strings FIRST (protect URLs containing // etc.)
+    work = work.replace(/"(?:[^"\\]|\\.)*"/g, function (m) {
+      parts.push('<span class="tok-s">' + esc(m) + "</span>"); return "\u0000" + (parts.length - 1) + "\u0000";
+    });
+    // comments: # ... and // ...
+    work = work.replace(/(#[^\n]*|\/\/[^\n]*)/g, function (m) {
+      parts.push('<span class="tok-c">' + esc(m) + "</span>"); return "\u0000" + (parts.length - 1) + "\u0000";
+    });
+
+    // escape the rest
+    work = esc(work);
+
+    // numbers
+    work = work.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-n">$1</span>');
+    // keywords by language
+    var kw = KW[lang];
+    if (kw) work = work.replace(kw, '<span class="tok-k">$1</span>');
+    // terraform interpolation ${...} and resource refs as attrs (light touch)
+    work = work.replace(/(\$\{[^}]*\})/g, '<span class="tok-a">$1</span>');
+
+    // restore protected parts
+    work = work.replace(/\u0000(\d+)\u0000/g, function (_, i) { return parts[+i]; });
+    return work;
+  }
+  doc.querySelectorAll('pre code[class*="lang-"]').forEach(function (code) {
+    var cls = code.className.match(/lang-(\w+)/);
+    var lang = cls ? cls[1] : "";
+    if (!KW[lang]) lang = lang; // still allow comments/strings/numbers
+    try { code.innerHTML = highlight(code.textContent, lang); } catch (e) {}
+  });
+
+})();
+</script>
+</body>
+</html>
